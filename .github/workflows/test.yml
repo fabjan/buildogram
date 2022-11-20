@@ -14,9 +14,19 @@ jobs:
       - uses: actions/checkout@v3.0.0
       - uses: erlef/setup-beam@v1.13.0
         with:
-          otp-version: "25.1"
+          elixir-version: "1.14.2"
           gleam-version: "0.24.0"
+          otp-version: "25.1.2"
           rebar3-version: "3.20.0"
+      - run: |
+          set -euo pipefail
+          echo Ensuring .tool-versions match CI versions...
+          find_version() {
+            grep $1 .github/workflows/test.yml | tr -d ' "' | cut -d':' -f2
+          }
+          grep "$(find_version elixir-version)" .tool-versions
+          grep "$(find_version otp-version)" .tool-versions
+          grep "$(find_version gleam-version)" .tool-versions
       - run: gleam format --check src test
       - run: gleam deps download
       - run: gleam test
