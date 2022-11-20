@@ -19,7 +19,7 @@ import gleam/result
 import gleam/erlang/process
 import gleam/erlang/os
 import gleam/http/elli
-import http
+import buildogram/http
 
 pub fn main() {
   let port =
@@ -28,14 +28,13 @@ pub fn main() {
     |> result.unwrap(3000)
 
   // Start the web server process
-  assert Ok(_) =
-    http.stack()
-    |> elli.start(on_port: port)
+  let server = http.stack()
+  assert Ok(_) = elli.start(server, on_port: port)
 
   ["Listening on localhost:", int.to_string(port), " ✨"]
   |> string.concat
   |> io.println
 
-  // Put the main process to sleep while the web server does its thing
+  // TODO: signal handling
   process.sleep_forever()
 }
