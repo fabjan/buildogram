@@ -13,8 +13,10 @@
 ////   limitations under the License.
 
 import gleam/int
+import gleam/json
+import gleam/list
 import gleam/string
-import gleam/dynamic.{DecodeError, Dynamic}
+import gleam/dynamic.{Dynamic}
 import gleam/result
 
 /// Something went wrong parsing something.
@@ -59,11 +61,13 @@ pub fn parse_iso_8601(date: String) -> Result(Timestamp, ParseError) {
 }
 
 /// Decode a Timestamp from a Dynamic value.
-pub fn decode_timestamp(value: Dynamic) -> Result(Timestamp, List(DecodeError)) {
+pub fn decode_timestamp(
+  value: Dynamic,
+) -> Result(Timestamp, List(dynamic.DecodeError)) {
   try s = dynamic.string(value)
   parse_iso_8601(s)
   |> result.map_error(fn(e) {
-    [DecodeError(expected: "ISO 8601", found: e.issue, path: [])]
+    [dynamic.DecodeError(expected: "ISO 8601", found: e.issue, path: [])]
   })
 }
 
@@ -94,4 +98,23 @@ fn parse_int(s: String, name: String) -> Result(Int, ParseError) {
     Ok(i) -> Ok(i)
     Error(_) -> Error(ParseError("cannot parse " <> name <> " from " <> s))
   }
+}
+
+pub fn json_issue(err: json.DecodeError) -> String {
+  case err {
+    json.UnexpectedEndOfInput -> "unexpected end of input"
+    json.UnexpectedByte(byte, pos) ->
+      "unexpected byte " <> byte <> " at: " <> int.to_string(pos)
+    json.UnexpectedSequence(byte, pos) ->
+      "unexpected sequence " <> byte <> " at: " <> int.to_string(pos)
+    json.UnexpectedFormat(errors) ->
+      "unexpected format: " <> string.join(list.map(errors, dynamic_issue), ",")
+  }
+}
+
+pub fn dynamic_issue(err: dynamic.DecodeError) -> String {
+  "expected: " <> err.expected <> " found: " <> err.found <> " at: " <> string.join(
+    err.path,
+    "/",
+  )
 }

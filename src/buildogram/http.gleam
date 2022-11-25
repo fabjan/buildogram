@@ -12,24 +12,24 @@
 ////   See the License for the specific language governing permissions and
 ////   limitations under the License.
 
-import gleam/bit_builder.{append_string}
-import gleam/bit_string
+import gleam/bit_builder.{BitBuilder, append_string}
+import gleam/io
 import gleam/string
 import gleam/http.{Get}
-import gleam/http/service
-import gleam/http/request
-import gleam/http/response
-import buildogram/backfill
+import gleam/http/request.{Request}
+import gleam/http/response.{Response}
+import snag.{Snag}
+import buildogram/github
 import buildogram/diagram
 
 /// Configure middleware etc.
-pub fn stack() {
+pub fn stack() -> fn(Request(BitString)) -> Response(BitBuilder) {
   routes
-  |> service.map_response_body(bit_builder.from_bit_string)
+  |> snag_handler(bit_builder.from_string)
 }
 
 /// This is the main entry point for the web server.
-pub fn routes(request) {
+pub fn routes(request) -> Result(Response(BitBuilder), Snag) {
   let path = request.path_segments(request)
 
   case request.method, path {
@@ -43,26 +43,30 @@ pub fn routes(request) {
 fn not_found() {
   let body =
     "not found"
-    |> bit_string.from_string
+    |> bit_builder.from_string
 
-  response.new(404)
-  |> response.set_body(body)
-  |> response.prepend_header("content-type", "text/plain")
+  Ok(
+    response.new(404)
+    |> response.set_body(body)
+    |> response.prepend_header("content-type", "text/plain"),
+  )
 }
 
 fn hello(whom) {
   let reply = string.concat(["Hello, ", whom, "!"])
 
-  response.new(200)
-  |> response.set_body(bit_string.from_string(reply))
-  |> response.prepend_header("content-type", "text/plain")
+  Ok(
+    response.new(200)
+    |> response.set_body(bit_builder.from_string(reply))
+    |> response.prepend_header("content-type", "text/plain"),
+  )
 }
 
 fn handle_backfill(owner, repo) {
   let repo_path = string.concat([owner, "/", repo])
 
   // TODO: completed runs should be cached in a worker process, and/or the file system
-  let runs = backfill.get_all_runs(repo_path)
+  try runs = github.get_all_runs(repo_path)
 
   let response_body =
     bit_builder.new()
@@ -76,20 +80,58 @@ fn handle_backfill(owner, repo) {
 
   let content_type = "text/html"
 
-  response.new(200)
-  |> response.set_body(bit_builder.to_bit_string(response_body))
-  |> response.prepend_header("content-type", content_type)
+  let resp =
+    response.new(200)
+    |> response.set_body(response_body)
+    |> response.prepend_header("content-type", content_type)
+
+  Ok(resp)
 }
 
 fn handle_get_svg(owner, repo) {
   let repo_path = string.concat([owner, "/", repo])
 
-  let runs = backfill.get_all_runs(repo_path)
+  try runs = github.get_all_runs(repo_path)
 
   let content_type = "image/svg+xml"
   let response_body = diagram.bar_chart(runs, 400, 100)
 
-  response.new(200)
-  |> response.set_body(bit_string.from_string(response_body))
-  |> response.prepend_header("content-type", content_type)
+  Ok(
+    response.new(200)
+    |> response.set_body(bit_builder.from_string(response_body))
+    |> response.prepend_header("content-type", content_type),
+  )
+}
+
+fn snag_handler(
+  before: fn(Request(a)) -> Result(Response(b), Snag),
+  body_builder: fn(String) -> b,
+) -> fn(Request(a)) -> Response(b) {
+  fn(x: Request(a)) {
+    case before(x) {
+      Ok(response) -> response
+      Error(s) -> {
+        io.println(line_print(x) <> " " <> snag.line_print(s))
+        response.new(500)
+        |> response.set_body(body_builder("Internal Server Error"))
+      }
+    }
+  }
+}
+
+pub fn line_print(req: Request(a)) -> String {
+  case req.method {
+    http.Connect -> "CONNECT"
+    http.Delete -> "DELETE"
+    http.Get -> "GET"
+    http.Head -> "HEAD"
+    http.Options -> "OPTIONS"
+    http.Patch -> "PATCH"
+    http.Post -> "POST"
+    http.Put -> "PUT"
+    http.Trace -> "TRACE"
+    http.Other(m) -> string.uppercase(m)
+  }
+  |> string.append(" ")
+  |> string.append(req.path)
 }

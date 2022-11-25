@@ -14,8 +14,16 @@
 
 import gleam/dynamic.{DecodeError, Dynamic}
 import gleam/json.{Json}
+import gleam/hackney
+import gleam/http.{Get}
+import gleam/http/request.{Request}
+import gleam/http/response.{Response}
+import gleam/int
+import gleam/result
+import snag.{Snag}
 import buildogram/util.{Timestamp, decode_timestamp, encode_timestamp}
 
+/// WorkflowRun is a full pipeline run.
 pub type WorkflowRun {
   WorkflowRun(
     name: String,
@@ -28,6 +36,41 @@ pub type WorkflowRun {
     updated_at: Timestamp,
     jobs_url: String,
   )
+}
+
+/// WorkflowJobRun is a run of a single job in a pipeline.
+pub type WorkflowJobRun {
+  WorkflowJobRun(
+    name: String,
+    html_url: String,
+    run_attempt: Int,
+    status: String,
+    conclusion: String,
+    started_at: Timestamp,
+    completed_at: Timestamp,
+  )
+}
+
+/// Get all known runs for a given repository.
+///
+/// TODO: support for branch filter (?branch=xxx)
+pub fn get_all_runs(repo: String) -> Result(List(WorkflowRun), Snag) {
+  let request =
+    github_repo_request(repo, "/actions/runs")
+    |> request.prepend_header("accept", "application/json")
+
+  try response =
+    hackney.send(request)
+    |> snagmap_hackney()
+    |> snag.context("failed to get all runs")
+
+  try runs =
+    response.body
+    |> json.decode(dynamic.field("workflow_runs", dynamic.list(decode_run)))
+    |> snagmap_json()
+    |> snag.context("failed to decode response")
+
+  Ok(runs)
 }
 
 pub fn decode_run(dyn: Dynamic) -> Result(WorkflowRun, List(DecodeError)) {
@@ -47,34 +90,6 @@ pub fn decode_run(dyn: Dynamic) -> Result(WorkflowRun, List(DecodeError)) {
   )
 }
 
-pub fn encode_run(run: WorkflowRun) -> Json {
-  let run_started_at = encode_timestamp(run.run_started_at)
-  let updated_at = encode_timestamp(run.updated_at)
-  json.object([
-    #("name", json.string(run.name)),
-    #("head_branch", json.string(run.head_branch)),
-    #("run_number", json.int(run.run_number)),
-    #("run_attempt", json.int(run.run_attempt)),
-    #("conclusion", json.string(run.conclusion)),
-    #("html_url", json.string(run.html_url)),
-    #("run_started_at", json.string(run_started_at)),
-    #("updated_at", json.string(updated_at)),
-    #("jobsurl", json.string(run.jobs_url)),
-  ])
-}
-
-pub type WorkflowJobRun {
-  WorkflowJobRun(
-    name: String,
-    html_url: String,
-    run_attempt: Int,
-    status: String,
-    conclusion: String,
-    started_at: Timestamp,
-    completed_at: Timestamp,
-  )
-}
-
 pub fn decode_job_run(dyn: Dynamic) -> Result(WorkflowJobRun, List(DecodeError)) {
   dynamic.decode7(
     WorkflowJobRun,
@@ -90,16 +105,26 @@ pub fn decode_job_run(dyn: Dynamic) -> Result(WorkflowJobRun, List(DecodeError))
   )
 }
 
-pub fn encode_job_run(job_run: WorkflowJobRun) -> Json {
-  let started_at = encode_timestamp(job_run.started_at)
-  let completed_at = encode_timestamp(job_run.completed_at)
-  json.object([
-    #("name", json.string(job_run.name)),
-    #("run_attempt", json.int(job_run.run_attempt)),
-    #("html_url", json.string(job_run.html_url)),
-    #("status", json.string(job_run.status)),
-    #("conclusion", json.string(job_run.conclusion)),
-    #("started_at", json.string(started_at)),
-    #("completed_at", json.string(completed_at)),
-  ])
+fn github_repo_request(repo: String, path: String) {
+  request.new()
+  |> request.set_method(Get)
+  |> request.set_host("api.github.com")
+  |> request.set_path("/repos/" <> repo <> path)
+}
+
+fn snagmap_hackney(
+  res: Result(Response(String), hackney.Error),
+) -> Result(Response(String), Snag) {
+  case res {
+    Ok(rep) ->
+      case rep.status {
+        200 -> Ok(rep)
+        status -> snag.error("response status: " <> int.to_string(status))
+      }
+    Error(_) -> snag.error("hackney error")
+  }
+}
+
+fn snagmap_json(res: Result(a, json.DecodeError)) -> Result(a, Snag) {
+  result.map_error(res, fn(err) { snag.new(util.json_issue(err)) })
 }
