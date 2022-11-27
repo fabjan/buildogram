@@ -19,6 +19,7 @@ import gleam/http.{Get}
 import gleam/http/request.{Request}
 import gleam/http/response.{Response}
 import gleam/int
+import gleam/io
 import gleam/list
 import gleam/option.{Option}
 import gleam/result
@@ -63,18 +64,92 @@ pub fn get_all_runs(repo: String) -> Result(List(WorkflowRun), Snag) {
     github_repo_request(repo, "/actions/runs")
     |> request.prepend_header("accept", "application/json")
 
-  try response =
-    hackney.send(request)
-    |> snagmap_hackney()
-    |> snag.context("failed to get all runs")
-
   try runs =
-    response.body
-    |> json.decode(dynamic.field("workflow_runs", dynamic.list(decode_run)))
-    |> snagmap_json()
-    |> snag.context("failed to decode response")
+    request
+    |> get_and_decode(dynamic.field("workflow_runs", dynamic.list(decode_run)))
 
-  Ok(runs)
+  try all_runs = collect_previous_attempts(runs, 5)
+
+  Ok(all_runs)
+}
+
+fn collect_previous_attempts(
+  runs: List(WorkflowRun),
+  max_depth: Int,
+) -> Result(List(WorkflowRun), Snag) {
+  case max_depth {
+    0 -> {
+      io.println("Max depth reached, can't get all previous attempts")
+      Ok(runs)
+    }
+    _ ->
+      case previous_run_urls(runs) {
+        [] -> Ok(runs)
+        urls -> {
+          try prevs = result.all(previous_attempts(urls))
+          collect_previous_attempts(prevs, max_depth - 1)
+          |> result.map(fn(prevprev) {
+            prevprev
+            |> list.append(prevs)
+            |> list.append(runs)
+          })
+        }
+      }
+  }
+}
+
+fn previous_run_urls(runs: List(WorkflowRun)) -> List(Uri) {
+  runs
+  |> list.filter_map(fn(run) { option.to_result(run.previous_attempt_url, Nil) })
+}
+
+fn previous_attempts(run_urls: List(Uri)) -> List(Result(WorkflowRun, Snag)) {
+  let get_run = fn(url) -> Result(WorkflowRun, Snag) {
+    try req =
+      request.from_uri(url)
+      |> snag_context("failed to create request")
+
+    try run =
+      get_and_decode(req, decode_run)
+      |> snag_context("failed to get run")
+
+    Ok(run)
+  }
+
+  list.map(run_urls, get_run)
+}
+
+fn hackney_send(req: Request(String)) -> Result(Response(String), Snag) {
+  req
+  |> request.prepend_header("User-Agent", "buildogram")
+  |> hackney.send()
+  |> snagmap_hackney()
+}
+
+fn get_and_decode(
+  req: Request(String),
+  decode: fn(Dynamic) -> Result(a, List(dynamic.DecodeError)),
+) -> Result(a, Snag) {
+  try response =
+    hackney_send(req)
+    |> snag.context("HTTP request failed")
+  try previous_run =
+    response.body
+    |> json.decode(decode)
+    |> snagmap_json()
+    |> snag.context("JSON decode failed")
+  Ok(previous_run)
+}
+
+fn dynamic_uri(dyn: Dynamic) -> Result(Uri, List(DecodeError)) {
+  case dynamic.string(dyn) {
+    Error(errs) -> Error(errs)
+    Ok(uri) ->
+      case uri.parse(uri) {
+        Error(_) -> Error([dynamic.DecodeError("valid URI", uri, [])])
+        Ok(uri) -> Ok(uri)
+      }
+  }
 }
 
 pub fn decode_run(dyn: Dynamic) -> Result(WorkflowRun, List(DecodeError)) {
@@ -131,4 +206,8 @@ fn snagmap_hackney(
 
 fn snagmap_json(res: Result(a, json.DecodeError)) -> Result(a, Snag) {
   result.map_error(res, fn(err) { snag.new(util.json_issue(err)) })
+}
+
+fn snag_context(res: Result(a, b), msg: String) -> Result(a, Snag) {
+  result.map_error(res, fn(_) { snag.new(msg) })
 }
