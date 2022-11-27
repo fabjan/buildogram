@@ -1,7 +1,7 @@
 import gleeunit
 import gleeunit/should
 import gleam/json
-import gleam/option.{None}
+import gleam/option.{None, Some}
 import gleam/uri
 import buildogram/github.{WorkflowJobRun, WorkflowRun}
 import buildogram/timestamp.{Timestamp}
@@ -45,6 +45,28 @@ pub fn max_test() {
   let input = [1, 2, 3]
   util.max(input, 0)
   |> should.equal(3)
+}
+
+pub fn median_test() {
+  let input = []
+  util.median(input)
+  |> should.equal(None)
+
+  let input = [5]
+  util.median(input)
+  |> should.equal(Some(5))
+
+  let input = [1, 2, 3]
+  util.median(input)
+  |> should.equal(Some(2))
+
+  let input = [1, 2, 3, 4]
+  util.median(input)
+  |> should.equal(Some(3))
+
+  let input = [1, 5, 3, 1, 1]
+  util.median(input)
+  |> should.equal(Some(1))
 }
 
 pub fn decode_run_test() {

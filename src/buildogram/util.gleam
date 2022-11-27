@@ -15,12 +15,24 @@
 import gleam/int
 import gleam/json
 import gleam/list
+import gleam/option.{Option}
 import gleam/string
 import gleam/dynamic
 
 /// The sum of all Ints in the given list.
 pub fn sum(l: List(Int)) -> Int {
   list.fold(l, 0, fn(a, b) { a + b })
+}
+
+/// The median of all Ints in the given list.
+pub fn median(l: List(Int)) -> Option(Int) {
+  let sorted = list.sort(l, int.compare)
+  let length = list.length(sorted)
+  let middle = length / 2
+
+  sorted
+  |> list.at(middle)
+  |> option.from_result()
 }
 
 /// The greatest Int in the given list.

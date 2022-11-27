@@ -15,6 +15,7 @@
 import gleam/int
 import gleam/list
 import gleam/map
+import gleam/option.{None, Some}
 import gleam/pair
 import gleam/result
 import gleam/string
@@ -43,15 +44,23 @@ pub fn bar_chart(
     timestamp.time_diff(run.run_started_at, run.updated_at)
   }
 
+  // total per workflow
   let max_runtime =
     grouped_runs
     |> list.map(fn(r) { util.sum(list.map(r, runtime_seconds)) })
     |> util.max(0)
 
-  let bar_height = fn(run) { runtime_seconds(run) * max_height / max_runtime }
+  // per attempt
+  let median_runtime =
+    runs
+    |> list.map(runtime_seconds)
+    |> util.median()
+    |> option.unwrap(max_runtime)
+
+  let scale_seconds = fn(secs) { secs * max_height / max_runtime }
 
   let make_bar = fn(bar_x: Int, bar_y: Int, run: github.WorkflowRun) -> String {
-    let bar_height = bar_height(run)
+    let bar_height = scale_seconds(runtime_seconds(run))
     let y_offset = height - bar_height
     let bar_color = case run.conclusion {
       "success" -> "green"
@@ -86,7 +95,7 @@ pub fn bar_chart(
         let bar = make_bar(bar_x, bar_y, run)
 
         let sb = string_builder.append(sb, bar)
-        #(bar_y + bar_height(run) + 1, sb)
+        #(bar_y + scale_seconds(runtime_seconds(run)) + 1, sb)
       },
     )
     |> pair.second
@@ -106,29 +115,40 @@ pub fn bar_chart(
     |> append("</text>")
   }
 
+  let line = fn(sb, x1, y1, x2, y2, stroke, dasharray) {
+    sb
+    |> append("<line")
+    |> append(make_intattr(" x1", x1))
+    |> append(make_intattr(" y1", y1))
+    |> append(make_intattr(" x2", x2))
+    |> append(make_intattr(" y2", y2))
+    |> append(make_attr(" stroke", stroke))
+    |> fn(sb) {
+      case dasharray {
+        Some(dasharray) -> append(sb, make_attr(" stroke-dasharray", dasharray))
+        None -> sb
+      }
+    }
+    |> append("/>")
+  }
+
+  let max_height = height - scale_seconds(max_runtime)
+  let median_height = height - scale_seconds(median_runtime)
+  let time_string = fn(secs) { int.to_string(secs) <> "s" }
+
   let grid_etc =
     string_builder.new()
     |> append("<g>")
-    |> append("<line ")
-    |> append(make_intattr(" x1", 0))
-    |> append(make_intattr(" y1", 0))
-    |> append(make_intattr(" x2", 0))
-    |> append(make_intattr(" y2", height))
-    |> append(make_attr(" stroke", "black"))
-    |> append("/>")
-    // cross at max_height
-    |> append("<line ")
-    |> append(make_intattr(" x1", 0))
-    |> append(make_intattr(" y1", height - max_height))
-    |> append(make_intattr(" x2", width))
-    |> append(make_intattr(" y2", height - max_height))
-    |> append(make_attr(" stroke", "black"))
-    |> append(make_attr(" stroke-dasharray", "5,5"))
-    |> append("/>")
-    // max time label at top
-    |> axis_label(int.to_string(max_runtime) <> "s", text_size)
-    // zero time label at bottom
-    |> axis_label("0s", height)
+    // y axis
+    |> line(0, 0, 0, height, "black", None)
+    // x axis
+    |> line(0, height, width, height, "black", None)
+    // max runtime
+    |> line(0, max_height, width, max_height, "black", Some("5,5"))
+    |> axis_label(time_string(max_runtime), max_height)
+    // median runtime
+    |> line(0, median_height, width, median_height, "black", Some("5,5"))
+    |> axis_label(time_string(median_runtime), median_height)
     |> append("</g>")
     |> string_builder.to_string()
 
