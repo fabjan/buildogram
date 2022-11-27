@@ -1,8 +1,11 @@
 import gleeunit
 import gleeunit/should
 import gleam/json
+import gleam/option.{None}
+import gleam/uri
 import buildogram/github.{WorkflowJobRun, WorkflowRun}
-import buildogram/util.{Timestamp}
+import buildogram/timestamp.{Timestamp}
+import buildogram/util
 
 pub fn main() {
   gleeunit.main()
@@ -12,8 +15,36 @@ pub fn parse_iso_8601_test() {
   let input = "2022-11-15T21:42:37Z"
   let expected = Timestamp(2022, 11, 15, 21, 42, 37)
 
-  util.parse_iso_8601(input)
+  timestamp.parse_iso_8601(input)
   |> should.equal(Ok(expected))
+}
+
+pub fn time_diff_test() {
+  let start = Timestamp(2022, 11, 19, 22, 17, 5)
+  let end = Timestamp(2022, 11, 19, 22, 17, 14)
+
+  timestamp.time_diff(start, end)
+  |> should.equal(9)
+}
+
+pub fn sum_test() {
+  let input = []
+  util.sum(input)
+  |> should.equal(0)
+
+  let input = [1, 2, 3]
+  util.sum(input)
+  |> should.equal(6)
+}
+
+pub fn max_test() {
+  let input = []
+  util.max(input, -1)
+  |> should.equal(-1)
+
+  let input = [1, 2, 3]
+  util.max(input, 0)
+  |> should.equal(3)
 }
 
 pub fn decode_run_test() {
@@ -24,6 +55,7 @@ pub fn decode_run_test() {
        \"workflow_id\": 40609520,
        \"check_suite_id\": 9401904786,
        \"run_attempt\": 1,
+       \"previous_attempt_url\": null,
        \"html_url\": \"https://github.com/fabjan/poopline/actions/runs/3505370706\",
        \"name\": \"CI\",
        \"node_id\": \"WFR_kwLOIcSVg87Q77ZS\",
@@ -41,21 +73,31 @@ pub fn decode_run_test() {
        \"jobs_url\": \"https://api.github.com/repos/fabjan/poopline/actions/runs/3505370706/jobs\"
     }"
 
+  try expect_html_url =
+    uri.parse("https://github.com/fabjan/poopline/actions/runs/3505370706")
+
+  try expect_jobs_url =
+    uri.parse(
+      "https://api.github.com/repos/fabjan/poopline/actions/runs/3505370706/jobs",
+    )
+
   let expected =
     WorkflowRun(
       name: "CI",
-      html_url: "https://github.com/fabjan/poopline/actions/runs/3505370706",
+      html_url: expect_html_url,
       head_branch: "main",
       run_number: 21,
-      run_attempt: 1,
+      previous_attempt_url: None,
       conclusion: "success",
       run_started_at: Timestamp(2022, 11, 19, 22, 16, 57),
       updated_at: Timestamp(2022, 11, 19, 22, 17, 16),
-      jobs_url: "https://api.github.com/repos/fabjan/poopline/actions/runs/3505370706/jobs",
+      jobs_url: expect_jobs_url,
     )
 
-  json.decode(input_json, github.decode_run)
-  |> should.equal(Ok(expected))
+  Ok(
+    json.decode(input_json, github.decode_run)
+    |> should.equal(Ok(expected)),
+  )
 }
 
 pub fn decode_job_run_test() {
@@ -75,25 +117,24 @@ pub fn decode_job_run_test() {
       \"name\": \"inception\"
     }"
 
+  try expect_html_url =
+    uri.parse(
+      "https://github.com/fabjan/poopline/actions/runs/3505370706/jobs/5871644545",
+    )
+
   let expected =
     WorkflowJobRun(
       name: "inception",
       run_attempt: 1,
-      html_url: "https://github.com/fabjan/poopline/actions/runs/3505370706/jobs/5871644545",
+      html_url: expect_html_url,
       status: "completed",
       conclusion: "success",
       started_at: Timestamp(2022, 11, 19, 22, 17, 5),
       completed_at: Timestamp(2022, 11, 19, 22, 17, 14),
     )
 
-  json.decode(input_json, github.decode_job_run)
-  |> should.equal(Ok(expected))
-}
-
-pub fn time_diff_test() {
-  let start = Timestamp(2022, 11, 19, 22, 17, 5)
-  let end = Timestamp(2022, 11, 19, 22, 17, 14)
-
-  util.time_diff(start, end)
-  |> should.equal(9)
+  Ok(
+    json.decode(input_json, github.decode_job_run)
+    |> should.equal(Ok(expected)),
+  )
 }

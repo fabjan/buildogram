@@ -13,15 +13,19 @@
 ////   limitations under the License.
 
 import gleam/dynamic.{DecodeError, Dynamic}
-import gleam/json.{Json}
+import gleam/json
 import gleam/hackney
 import gleam/http.{Get}
 import gleam/http/request.{Request}
 import gleam/http/response.{Response}
 import gleam/int
+import gleam/list
+import gleam/option.{Option}
 import gleam/result
+import gleam/uri.{Uri}
 import snag.{Snag}
-import buildogram/util.{Timestamp, decode_timestamp, encode_timestamp}
+import buildogram/timestamp.{Timestamp, decode_timestamp}
+import buildogram/util
 
 /// WorkflowRun is a full pipeline run.
 pub type WorkflowRun {
@@ -29,12 +33,12 @@ pub type WorkflowRun {
     name: String,
     head_branch: String,
     run_number: Int,
-    run_attempt: Int,
+    previous_attempt_url: Option(Uri),
     conclusion: String,
-    html_url: String,
+    html_url: Uri,
     run_started_at: Timestamp,
     updated_at: Timestamp,
-    jobs_url: String,
+    jobs_url: Uri,
   )
 }
 
@@ -42,7 +46,7 @@ pub type WorkflowRun {
 pub type WorkflowJobRun {
   WorkflowJobRun(
     name: String,
-    html_url: String,
+    html_url: Uri,
     run_attempt: Int,
     status: String,
     conclusion: String,
@@ -79,12 +83,12 @@ pub fn decode_run(dyn: Dynamic) -> Result(WorkflowRun, List(DecodeError)) {
     dynamic.field("name", dynamic.string),
     dynamic.field("head_branch", dynamic.string),
     dynamic.field("run_number", dynamic.int),
-    dynamic.field("run_attempt", dynamic.int),
+    dynamic.field("previous_attempt_url", dynamic.optional(dynamic_uri)),
     dynamic.field("conclusion", dynamic.string),
-    dynamic.field("html_url", dynamic.string),
+    dynamic.field("html_url", dynamic_uri),
     dynamic.field("run_started_at", decode_timestamp),
     dynamic.field("updated_at", decode_timestamp),
-    dynamic.field("jobs_url", dynamic.string),
+    dynamic.field("jobs_url", dynamic_uri),
   )(
     dyn,
   )
@@ -94,7 +98,7 @@ pub fn decode_job_run(dyn: Dynamic) -> Result(WorkflowJobRun, List(DecodeError))
   dynamic.decode7(
     WorkflowJobRun,
     dynamic.field("name", dynamic.string),
-    dynamic.field("html_url", dynamic.string),
+    dynamic.field("html_url", dynamic_uri),
     dynamic.field("run_attempt", dynamic.int),
     dynamic.field("status", dynamic.string),
     dynamic.field("conclusion", dynamic.string),

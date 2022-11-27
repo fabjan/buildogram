@@ -16,90 +16,28 @@ import gleam/int
 import gleam/json
 import gleam/list
 import gleam/string
-import gleam/dynamic.{Dynamic}
-import gleam/result
+import gleam/dynamic
 
-/// Something went wrong parsing something.
-pub type ParseError {
-  ParseError(issue: String)
+/// The sum of all Ints in the given list.
+pub fn sum(l: List(Int)) -> Int {
+  list.fold(l, 0, fn(a, b) { a + b })
 }
 
-/// A timestamp (in UTC)
-pub type Timestamp {
-  Timestamp(
-    year: Int,
-    month: Int,
-    day: Int,
-    hour: Int,
-    minute: Int,
-    second: Int,
+/// The greatest Int in the given list.
+pub fn max(l: List(Int), z: Int) -> Int {
+  list.fold(
+    l,
+    z,
+    fn(a, b) {
+      case a > b {
+        True -> a
+        False -> b
+      }
+    },
   )
 }
 
-/// The difference in seconds between two timestamps.
-pub fn time_diff(start: Timestamp, end: Timestamp) -> Int {
-  to_seconds(end) - to_seconds(start)
-}
-
-/// Parse Timestamps from a subset of ISO 8601.
-pub fn parse_iso_8601(date: String) -> Result(Timestamp, ParseError) {
-  let split = string.split
-
-  // TODO: handle these cases without match errors
-  let [datestring, timestring] = split(date, "T")
-  let [year, month, day] = split(datestring, "-")
-  let [hour, minute, second] = split(timestring, ":")
-  let [second, _] = split(second, "Z")
-
-  try year = parse_int(year, "year")
-  try month = parse_int(month, "month")
-  try day = parse_int(day, "day")
-  try hour = parse_int(hour, "hour")
-  try minute = parse_int(minute, "minute")
-  try second = parse_int(second, "second")
-  Ok(Timestamp(year, month, day, hour, minute, second))
-}
-
-/// Decode a Timestamp from a Dynamic value.
-pub fn decode_timestamp(
-  value: Dynamic,
-) -> Result(Timestamp, List(dynamic.DecodeError)) {
-  try s = dynamic.string(value)
-  parse_iso_8601(s)
-  |> result.map_error(fn(e) {
-    [dynamic.DecodeError(expected: "ISO 8601", found: e.issue, path: [])]
-  })
-}
-
-/// Encode a Timestamp to a String.
-pub fn encode_timestamp(timestamp: Timestamp) -> String {
-  let year = int.to_string(timestamp.year)
-  let month = int.to_string(timestamp.month)
-  let day = int.to_string(timestamp.day)
-  let hour = int.to_string(timestamp.hour)
-  let minute = int.to_string(timestamp.minute)
-  let second = int.to_string(timestamp.second)
-
-  let datestring = year <> "-" <> month <> "-" <> day
-  let timestring = hour <> ":" <> minute <> ":" <> second <> "Z"
-  datestring <> "T" <> timestring
-}
-
-fn to_seconds(ts: Timestamp) {
-  // TODO: perhaps a timestamp struct was not the right approach
-  let Timestamp(year, month, day, hour, minute, second) = ts
-  let days = day + month * 30 + year * 365
-  let seconds = second + minute * 60 + hour * 60 * 60
-  days * 24 * 60 * 60 + seconds
-}
-
-fn parse_int(s: String, name: String) -> Result(Int, ParseError) {
-  case int.parse(s) {
-    Ok(i) -> Ok(i)
-    Error(_) -> Error(ParseError("cannot parse " <> name <> " from " <> s))
-  }
-}
-
+/// String description of a JSON decode error.
 pub fn json_issue(err: json.DecodeError) -> String {
   case err {
     json.UnexpectedEndOfInput -> "unexpected end of input"
@@ -112,6 +50,7 @@ pub fn json_issue(err: json.DecodeError) -> String {
   }
 }
 
+/// String description of a dynamic decode error.
 pub fn dynamic_issue(err: dynamic.DecodeError) -> String {
   "expected: " <> err.expected <> " found: " <> err.found <> " at: " <> string.join(
     err.path,

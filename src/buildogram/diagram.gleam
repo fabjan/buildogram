@@ -16,7 +16,9 @@ import gleam/int
 import gleam/list
 import gleam/string
 import gleam/string_builder.{append}
+import gleam/uri
 import buildogram/github
+import buildogram/timestamp
 import buildogram/util
 
 /// The greatest Int in the given list.
@@ -43,7 +45,7 @@ pub fn bar_chart(
   let max_height = height - 20
 
   let runtime_seconds = fn(run: github.WorkflowRun) {
-    util.time_diff(run.run_started_at, run.updated_at)
+    timestamp.time_diff(run.run_started_at, run.updated_at)
   }
 
   let max_runtime = max(list.map(runs, fn(p) { runtime_seconds(p) }))
@@ -65,7 +67,10 @@ pub fn bar_chart(
         make_intattr("width", bar_width),
         make_intattr("height", bar_height),
         make_attr("fill", bar_color),
-        make_attr("onclick", "window.open('" <> run.html_url <> "', '_blank')"),
+        make_attr(
+          "onclick",
+          "window.open('" <> uri.to_string(run.html_url) <> "', '_blank')",
+        ),
         "/>",
       ],
       " ",
