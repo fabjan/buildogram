@@ -2,11 +2,11 @@
 
 Shows stats for your CI pipelines.
 
-See build times or test results over time.
+See build times or test results over time. Like so:
 
-Inspired by the simplicity of the great [CI-BuildStats](https://github.com/dustinmoris/CI-BuildStats), which can create these:
+[![Build history](https://buildogram.srv.fmbb.se/bars/fabjan/buildogram)](https://github.com/fabjan/buildogram/actions)
 
-[![Build history](https://buildstats.info/github/chart/fabjan/buildogram)](https://github.com/fabjan/buildogram/actions)
+Inspired by the simplicity of the great [CI-BuildStats](https://github.com/dustinmoris/CI-BuildStats).
 
 ## Quick start
 
