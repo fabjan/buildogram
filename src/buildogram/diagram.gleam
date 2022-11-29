@@ -18,10 +18,10 @@ import gleam/map
 import gleam/option.{None, Some}
 import gleam/pair
 import gleam/result
-import gleam/string
-import gleam/string_builder.{append}
+import gleam/string_builder
 import gleam/uri
 import buildogram/github
+import buildogram/svg
 import buildogram/timestamp
 import buildogram/util
 
@@ -66,26 +66,14 @@ pub fn bar_chart(
       "success" -> "green"
       "failure" -> "red"
     }
+    let link = "window.open('" <> uri.to_string(run.html_url) <> "', '_blank')"
 
-    string.join(
-      [
-        "<rect",
-        make_intattr("x", bar_x),
-        make_intattr("y", y_offset - bar_y),
-        make_intattr("width", bar_width),
-        make_intattr("height", bar_height),
-        make_attr("fill", bar_color),
-        make_attr(
-          "onclick",
-          "window.open('" <> uri.to_string(run.html_url) <> "', '_blank')",
-        ),
-        "/>",
-      ],
-      " ",
-    )
+    string_builder.new()
+    |> svg.rect(bar_x, y_offset - bar_y, bar_width, bar_height, bar_color, link)
+    |> string_builder.to_string()
   }
 
-  let make_stack = fn(i: Int, attempts: List(github.WorkflowRun)) -> String {
+  let make_stack = fn(i: Int, attempts: List(github.WorkflowRun)) {
     attempts
     |> list.fold(
       #(0, string_builder.new()),
@@ -99,83 +87,37 @@ pub fn bar_chart(
       },
     )
     |> pair.second
-    |> string_builder.to_string()
-  }
-
-  let axis_label = fn(sb, text, y) {
-    sb
-    |> append("<text")
-    |> append(make_intattr(" x", 1))
-    |> append(make_intattr(" y", y))
-    |> append(make_intattr(" font-size", text_size))
-    |> append(make_attr(" font-family", "sans-serif"))
-    |> append(make_attr(" fill", "black"))
-    |> append(">")
-    |> append(text)
-    |> append("</text>")
-  }
-
-  let line = fn(sb, x1, y1, x2, y2, stroke, dasharray) {
-    sb
-    |> append("<line")
-    |> append(make_intattr(" x1", x1))
-    |> append(make_intattr(" y1", y1))
-    |> append(make_intattr(" x2", x2))
-    |> append(make_intattr(" y2", y2))
-    |> append(make_attr(" stroke", stroke))
-    |> fn(sb) {
-      case dasharray {
-        Some(dasharray) -> append(sb, make_attr(" stroke-dasharray", dasharray))
-        None -> sb
-      }
-    }
-    |> append("/>")
   }
 
   let max_height = height - scale_seconds(max_runtime)
   let median_height = height - scale_seconds(median_runtime)
   let time_string = fn(secs) { int.to_string(secs) <> "s" }
 
-  let grid_etc =
+  let grid =
     string_builder.new()
-    |> append("<g>")
+    |> string_builder.append("<g>")
     // y axis
-    |> line(0, 0, 0, height, "black", None)
+    |> svg.line(0, 0, 0, height, "black", None)
     // x axis
-    |> line(0, height, width, height, "black", None)
+    |> svg.line(0, height, width, height, "black", None)
     // max runtime
-    |> line(0, max_height, width, max_height, "black", Some("5,5"))
-    |> axis_label(time_string(max_runtime), max_height)
+    |> svg.line(0, max_height, width, max_height, "black", Some("5,5"))
+    |> svg.text(time_string(max_runtime), 1, max_height, text_size)
     // median runtime
-    |> line(0, median_height, width, median_height, "black", Some("5,5"))
-    |> axis_label(time_string(median_runtime), median_height)
-    |> append("</g>")
-    |> string_builder.to_string()
+    |> svg.line(0, median_height, width, median_height, "black", Some("5,5"))
+    |> svg.text(time_string(median_runtime), 1, median_height, text_size)
+    |> string_builder.append("</g>")
+
+  let bars =
+    grouped_runs
+    |> list.index_map(make_stack)
 
   let chart =
-    string.join(
-      [
-        "<svg",
-        make_attr("xmlns", "http://www.w3.org/2000/svg"),
-        make_intattr("width", width),
-        make_intattr("height", height),
-        ">",
-        string.join(list.index_map(grouped_runs, make_stack), "\n"),
-        grid_etc,
-        "</svg>",
-      ],
-      " ",
-    )
+    string_builder.new()
+    |> svg.doc(width, height, list.append(bars, [grid]))
+    |> string_builder.to_string()
 
   chart
-}
-
-fn make_attr(key, value) {
-  string.concat([key, "=\"", value, "\""])
-}
-
-fn make_intattr(key, value) {
-  string.concat([key, "=\"", int.to_string(value), "\""])
 }
 
 fn list_group_by(l: List(a), f: fn(a) -> key) -> List(List(a)) {
