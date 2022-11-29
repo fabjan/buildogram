@@ -23,6 +23,7 @@ FROM erlang:25.1.2.0-alpine AS runtime
 COPY --from=builder /build/build/erlang-shipment /app
 
 # Run the server
+EXPOSE 3000
 WORKDIR /app
 ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["run"]
