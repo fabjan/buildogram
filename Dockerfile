@@ -1,8 +1,12 @@
-FROM ghcr.io/gleam-lang/gleam:v0.25.0-erlang-alpine AS builder
+FROM elixir:1.14.2-alpine AS builder
+
+# Setup gleam
+RUN wget https://github.com/gleam-lang/gleam/releases/download/v0.25.0/gleam-v0.25.0-x86_64-unknown-linux-musl.tar.gz
+RUN tar -xzf gleam-v0.25.0-x86_64-unknown-linux-musl.tar.gz
+RUN mv gleam /usr/local/bin/gleam
 
 # Prepare the dependencies
 # TODO: is it possible to use elixir from an image instead of installing it?
-RUN apk add --no-cache elixir
 COPY gleam.toml /build/
 COPY manifest.toml /build/
 WORKDIR /build
