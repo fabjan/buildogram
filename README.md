@@ -18,7 +18,9 @@ gleam shell # Run an Erlang shell
 
 ## Deploying
 
-The [Dockerfile](./Dockerfile) describes how to build a container image which listens on port 3000.
+See [buildogram packages](https://github.com/fabjan/buildogram/pkgs/container/buildogram).
+
+You can also use the [Dockerfile](./Dockerfile) to build your own container image. By default it listens on port 3000.
 
 Build with docker (takes a good while):
 
@@ -26,7 +28,7 @@ Build with docker (takes a good while):
 docker build -t buildogram .
 ```
 
-You can try it out locally:
+You can then try it out locally with curl:
 
 ```shell session
 $ docker run --rm -d -p3000:3000 buildogram:latest
