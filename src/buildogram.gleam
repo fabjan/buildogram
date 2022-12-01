@@ -19,7 +19,9 @@ import gleam/result
 import gleam/erlang/process
 import gleam/erlang/os
 import gleam/http/elli
-import buildogram/http
+import buildogram/http_server
+import buildogram/http_client
+import buildogram/util
 
 pub fn main() {
   let port =
@@ -27,8 +29,14 @@ pub fn main() {
     |> result.then(int.parse)
     |> result.unwrap(3000)
 
+  // TODO: use supervisor
+  // Start our dependencies
+  try client =
+    http_client.start()
+    |> util.snag_context("starting HTTP client")
+
   // Start the web server process
-  let server = http.stack()
+  try server = http_server.stack(client)
   assert Ok(_) = elli.start(server, on_port: port)
 
   ["Listening on localhost:", int.to_string(port), " ✨"]
@@ -36,5 +44,5 @@ pub fn main() {
   |> io.println
 
   // TODO: signal handling
-  process.sleep_forever()
+  Ok(process.sleep_forever())
 }

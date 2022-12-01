@@ -13,18 +13,16 @@
 ////   limitations under the License.
 
 import gleam/dynamic.{DecodeError, Dynamic}
+import gleam/erlang/process.{Subject}
 import gleam/json
-import gleam/hackney
-import gleam/http.{Get}
-import gleam/http/request.{Request}
 import gleam/http/response.{Response}
-import gleam/int
 import gleam/io
 import gleam/list
 import gleam/option.{Option}
 import gleam/result
 import gleam/uri.{Uri}
 import snag.{Snag}
+import buildogram/http_client.{HttpGet}
 import buildogram/timestamp.{Timestamp, decode_timestamp}
 import buildogram/util
 
@@ -59,21 +57,31 @@ pub type WorkflowJobRun {
 /// Get all known runs for a given repository.
 ///
 /// TODO: support for branch filter (?branch=xxx)
-pub fn get_all_runs(repo: String) -> Result(List(WorkflowRun), Snag) {
-  let request =
-    github_repo_request(repo, "/actions/runs")
-    |> request.prepend_header("accept", "application/json")
+pub fn get_all_runs(
+  http_client: Subject(HttpGet),
+  repo: String,
+) -> Result(List(WorkflowRun), Snag) {
+  let result = process.new_subject()
+  let req =
+    HttpGet("api.github.com", "/repos/" <> repo <> "/actions/runs", result)
+  process.send(http_client, req)
 
-  try runs =
-    request
-    |> get_and_decode(dynamic.field("workflow_runs", dynamic.list(decode_run)))
+  // TODO: embetter flatmap
+  try runs = case process.receive(result, 5000) {
+    Ok(Ok(resp)) ->
+      resp
+      |> json_decode(dynamic.field("workflow_runs", dynamic.list(decode_run)))
+    Ok(Error(err)) -> Error(err)
+    Error(Nil) -> snag.error("timeout")
+  }
 
-  try all_runs = collect_previous_attempts(runs, 5)
+  try all_runs = collect_previous_attempts(http_client, runs, 5)
 
   Ok(all_runs)
 }
 
 fn collect_previous_attempts(
+  http_client: Subject(HttpGet),
   runs: List(WorkflowRun),
   max_depth: Int,
 ) -> Result(List(WorkflowRun), Snag) {
@@ -86,8 +94,8 @@ fn collect_previous_attempts(
       case previous_run_urls(runs) {
         [] -> Ok(runs)
         urls -> {
-          try prevs = result.all(previous_attempts(urls))
-          collect_previous_attempts(prevs, max_depth - 1)
+          try prevs = result.all(previous_attempts(http_client, urls))
+          collect_previous_attempts(http_client, prevs, max_depth - 1)
           |> result.map(fn(prevprev) {
             prevprev
             |> list.append(prevs)
@@ -103,15 +111,23 @@ fn previous_run_urls(runs: List(WorkflowRun)) -> List(Uri) {
   |> list.filter_map(fn(run) { option.to_result(run.previous_attempt_url, Nil) })
 }
 
-fn previous_attempts(run_urls: List(Uri)) -> List(Result(WorkflowRun, Snag)) {
-  let get_run = fn(url) -> Result(WorkflowRun, Snag) {
-    try req =
-      request.from_uri(url)
-      |> snag_context("failed to create request")
+fn previous_attempts(
+  http_client: Subject(HttpGet),
+  run_urls: List(Uri),
+) -> List(Result(WorkflowRun, Snag)) {
+  let get_run = fn(run_url) -> Result(WorkflowRun, Snag) {
+    let respond = process.new_subject()
+    try req = http_client.new_get(run_url, respond)
+    process.send(http_client, req)
 
-    try run =
-      get_and_decode(req, decode_run)
-      |> snag_context("failed to get run")
+    // TODO: embetter flatmap
+    try run = case process.receive(respond, 5000) {
+      Ok(Ok(resp)) ->
+        resp
+        |> json_decode(decode_run)
+      Ok(Error(err)) -> Error(err)
+      Error(Nil) -> snag.error("timeout")
+    }
 
     Ok(run)
   }
@@ -119,20 +135,10 @@ fn previous_attempts(run_urls: List(Uri)) -> List(Result(WorkflowRun, Snag)) {
   list.map(run_urls, get_run)
 }
 
-fn hackney_send(req: Request(String)) -> Result(Response(String), Snag) {
-  req
-  |> request.prepend_header("User-Agent", "buildogram")
-  |> hackney.send()
-  |> snagmap_hackney()
-}
-
-fn get_and_decode(
-  req: Request(String),
+fn json_decode(
+  response: Response(String),
   decode: fn(Dynamic) -> Result(a, List(dynamic.DecodeError)),
 ) -> Result(a, Snag) {
-  try response =
-    hackney_send(req)
-    |> snag.context("HTTP request failed")
   try previous_run =
     response.body
     |> json.decode(decode)
@@ -184,30 +190,6 @@ pub fn decode_job_run(dyn: Dynamic) -> Result(WorkflowJobRun, List(DecodeError))
   )
 }
 
-fn github_repo_request(repo: String, path: String) {
-  request.new()
-  |> request.set_method(Get)
-  |> request.set_host("api.github.com")
-  |> request.set_path("/repos/" <> repo <> path)
-}
-
-fn snagmap_hackney(
-  res: Result(Response(String), hackney.Error),
-) -> Result(Response(String), Snag) {
-  case res {
-    Ok(rep) ->
-      case rep.status {
-        200 -> Ok(rep)
-        status -> snag.error("response status: " <> int.to_string(status))
-      }
-    Error(_) -> snag.error("hackney error")
-  }
-}
-
 fn snagmap_json(res: Result(a, json.DecodeError)) -> Result(a, Snag) {
   result.map_error(res, fn(err) { snag.new(util.json_issue(err)) })
-}
-
-fn snag_context(res: Result(a, b), msg: String) -> Result(a, Snag) {
-  result.map_error(res, fn(_) { snag.new(msg) })
 }

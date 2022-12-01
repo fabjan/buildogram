@@ -12,31 +12,41 @@
 ////   See the License for the specific language governing permissions and
 ////   limitations under the License.
 
-import gleam/bit_builder.{BitBuilder, append_string}
-import gleam/io
-import gleam/string
+import gleam/bit_builder.{BitBuilder}
 import gleam/http.{Get}
 import gleam/http/request.{Request}
 import gleam/http/response.{Response}
+import gleam/io
+import gleam/erlang/process.{Subject}
+import gleam/string
 import snag.{Snag}
-import buildogram/github
 import buildogram/diagram
+import buildogram/github
+import buildogram/http_client.{HttpGet}
+import buildogram/util
 
 /// Configure middleware etc.
-pub fn stack() -> fn(Request(BitString)) -> Response(BitBuilder) {
-  routes
-  |> snag_handler(bit_builder.from_string)
+pub fn stack(
+  client: Subject(HttpGet),
+) -> Result(fn(Request(BitString)) -> Response(BitBuilder), Snag) {
+  Ok(
+    routes(client)
+    |> snag_handler(bit_builder.from_string),
+  )
 }
 
 /// This is the main entry point for the web server.
-pub fn routes(request) -> Result(Response(BitBuilder), Snag) {
-  let path = request.path_segments(request)
+pub fn routes(
+  client: Subject(HttpGet),
+) -> fn(Request(a)) -> Result(Response(BitBuilder), Snag) {
+  fn(req) {
+    let path = request.path_segments(req)
 
-  case request.method, path {
-    Get, ["hello", whom] -> hello(whom)
-    Get, ["bars", owner, repo] -> handle_get_svg(owner, repo)
-    Get, ["debug", "backfill", owner, repo] -> handle_backfill(owner, repo)
-    _, _ -> not_found()
+    case req.method, path {
+      Get, ["hello", whom] -> hello(whom)
+      Get, ["bars", owner, repo] -> handle_get_svg(client, owner, repo)
+      _, _ -> not_found()
+    }
   }
 }
 
@@ -62,36 +72,10 @@ fn hello(whom) {
   )
 }
 
-fn handle_backfill(owner, repo) {
+fn handle_get_svg(client, owner, repo) {
   let repo_path = string.concat([owner, "/", repo])
 
-  // TODO: completed runs should be cached in a worker process, and/or the file system
-  try runs = github.get_all_runs(repo_path)
-
-  let response_body =
-    bit_builder.new()
-    |> append_string("<h1> Debugging </h1>\n")
-    |> append_string("<h2> Inline SVG </h2>\n")
-    |> append_string(diagram.bar_chart(runs, 600, 100))
-    |> append_string("<h2> SVG as an image </h2>\n")
-    |> append_string(
-      "<img src=\"http://localhost:3000/bars/" <> owner <> "/" <> repo <> "/\" />\n",
-    )
-
-  let content_type = "text/html"
-
-  let resp =
-    response.new(200)
-    |> response.set_body(response_body)
-    |> response.prepend_header("content-type", content_type)
-
-  Ok(resp)
-}
-
-fn handle_get_svg(owner, repo) {
-  let repo_path = string.concat([owner, "/", repo])
-
-  try runs = github.get_all_runs(repo_path)
+  try runs = github.get_all_runs(client, repo_path)
 
   let content_type = "image/svg+xml"
   let response_body = diagram.bar_chart(runs, 400, 100)
@@ -111,27 +95,10 @@ fn snag_handler(
     case before(x) {
       Ok(response) -> response
       Error(s) -> {
-        io.println(line_print(x) <> " " <> snag.line_print(s))
+        io.println(util.show_req(x) <> " " <> snag.line_print(s))
         response.new(500)
         |> response.set_body(body_builder("Internal Server Error"))
       }
     }
   }
-}
-
-pub fn line_print(req: Request(a)) -> String {
-  case req.method {
-    http.Connect -> "CONNECT"
-    http.Delete -> "DELETE"
-    http.Get -> "GET"
-    http.Head -> "HEAD"
-    http.Options -> "OPTIONS"
-    http.Patch -> "PATCH"
-    http.Post -> "POST"
-    http.Put -> "PUT"
-    http.Trace -> "TRACE"
-    http.Other(m) -> string.uppercase(m)
-  }
-  |> string.append(" ")
-  |> string.append(req.path)
 }

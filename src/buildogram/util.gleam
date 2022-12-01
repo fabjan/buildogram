@@ -12,12 +12,16 @@
 ////   See the License for the specific language governing permissions and
 ////   limitations under the License.
 
+import gleam/http
+import gleam/http/request.{Request}
 import gleam/int
 import gleam/json
 import gleam/list
 import gleam/option.{Option}
+import gleam/result
 import gleam/string
 import gleam/dynamic
+import snag.{Snag}
 
 /// The sum of all Ints in the given list.
 pub fn sum(l: List(Int)) -> Int {
@@ -68,4 +72,27 @@ pub fn dynamic_issue(err: dynamic.DecodeError) -> String {
     err.path,
     "/",
   )
+}
+
+/// One-line description of an HTTP request.
+pub fn show_req(req: Request(a)) -> String {
+  case req.method {
+    http.Connect -> "CONNECT"
+    http.Delete -> "DELETE"
+    http.Get -> "GET"
+    http.Head -> "HEAD"
+    http.Options -> "OPTIONS"
+    http.Patch -> "PATCH"
+    http.Post -> "POST"
+    http.Put -> "PUT"
+    http.Trace -> "TRACE"
+    http.Other(m) -> string.uppercase(m)
+  }
+  |> string.append(" ")
+  |> string.append(req.path)
+}
+
+/// Transform any error to a new Snag with the given context.
+pub fn snag_context(res: Result(a, b), context: String) -> Result(a, Snag) {
+  result.map_error(res, fn(_) { snag.new(context) })
 }
