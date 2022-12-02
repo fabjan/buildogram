@@ -35,17 +35,48 @@ pub type HttpGet {
   )
 }
 
-pub fn new_get(
+/// Start a new HTTP client.
+pub fn start() -> Result(Subject(HttpGet), StartError) {
+  actor.start(HttpClient(map.new(), map.new()), handle_get)
+}
+
+/// Send a GET request to the given host/path, via client.
+pub fn get(client, host, path) -> Result(Response(String), Snag) {
+  let pipe = process.new_subject()
+  let req = HttpGet(host, path, pipe)
+
+  process.send(client, req)
+
+  // FIXME: this is not a flatmap...
+  case process.receive(pipe, 5000) {
+    Ok(Ok(response)) -> Ok(response)
+    Ok(Error(snag)) -> Error(snag)
+    Error(_) -> snag.error("timeout")
+  }
+}
+
+/// Send a GET request to the given URL, via client.
+pub fn get_url(client, url) -> Result(Response(String), Snag) {
+  let pipe = process.new_subject()
+  try req = new_get(url, pipe)
+
+  process.send(client, req)
+
+  // FIXME: this is not a flatmap...
+  case process.receive(pipe, 5000) {
+    Ok(Ok(response)) -> Ok(response)
+    Ok(Error(snag)) -> Error(snag)
+    Error(_) -> snag.error("timeout")
+  }
+}
+
+fn new_get(
   uri: Uri,
   respond: Subject(Result(Response(String), Snag)),
 ) -> Result(HttpGet, Snag) {
   let Uri(_, _, host, _, path, _, _) = uri
   try host = option.to_result(host, snag.new("no host"))
   Ok(HttpGet(host, path, respond))
-}
-
-pub fn start() -> Result(Subject(HttpGet), StartError) {
-  actor.start(HttpClient(map.new(), map.new()), handle_get)
 }
 
 type HttpClient {

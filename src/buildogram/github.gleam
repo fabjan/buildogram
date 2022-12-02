@@ -58,30 +58,27 @@ pub type WorkflowJobRun {
 ///
 /// TODO: support for branch filter (?branch=xxx)
 pub fn get_all_runs(
-  http_client: Subject(HttpGet),
+  client: Subject(HttpGet),
   repo: String,
 ) -> Result(List(WorkflowRun), Snag) {
-  let result = process.new_subject()
-  let req =
-    HttpGet("api.github.com", "/repos/" <> repo <> "/actions/runs", result)
-  process.send(http_client, req)
+  try resp =
+    http_client.get(
+      client,
+      "api.github.com",
+      "/repos/" <> repo <> "/actions/runs",
+    )
 
-  // TODO: embetter flatmap
-  try runs = case process.receive(result, 5000) {
-    Ok(Ok(resp)) ->
-      resp
-      |> json_decode(dynamic.field("workflow_runs", dynamic.list(decode_run)))
-    Ok(Error(err)) -> Error(err)
-    Error(Nil) -> snag.error("timeout")
-  }
+  try runs =
+    resp
+    |> json_decode(dynamic.field("workflow_runs", dynamic.list(decode_run)))
 
-  try all_runs = collect_previous_attempts(http_client, runs, 5)
+  try all_runs = collect_previous_attempts(client, runs, 5)
 
   Ok(all_runs)
 }
 
 fn collect_previous_attempts(
-  http_client: Subject(HttpGet),
+  client: Subject(HttpGet),
   runs: List(WorkflowRun),
   max_depth: Int,
 ) -> Result(List(WorkflowRun), Snag) {
@@ -94,8 +91,8 @@ fn collect_previous_attempts(
       case previous_run_urls(runs) {
         [] -> Ok(runs)
         urls -> {
-          try prevs = result.all(previous_attempts(http_client, urls))
-          collect_previous_attempts(http_client, prevs, max_depth - 1)
+          try prevs = result.all(previous_attempts(client, urls))
+          collect_previous_attempts(client, prevs, max_depth - 1)
           |> result.map(fn(prevprev) {
             prevprev
             |> list.append(prevs)
@@ -112,22 +109,15 @@ fn previous_run_urls(runs: List(WorkflowRun)) -> List(Uri) {
 }
 
 fn previous_attempts(
-  http_client: Subject(HttpGet),
+  client: Subject(HttpGet),
   run_urls: List(Uri),
 ) -> List(Result(WorkflowRun, Snag)) {
   let get_run = fn(run_url) -> Result(WorkflowRun, Snag) {
-    let respond = process.new_subject()
-    try req = http_client.new_get(run_url, respond)
-    process.send(http_client, req)
+    try resp = http_client.get_url(client, run_url)
 
-    // TODO: embetter flatmap
-    try run = case process.receive(respond, 5000) {
-      Ok(Ok(resp)) ->
-        resp
-        |> json_decode(decode_run)
-      Ok(Error(err)) -> Error(err)
-      Error(Nil) -> snag.error("timeout")
-    }
+    try run =
+      resp
+      |> json_decode(decode_run)
 
     Ok(run)
   }
