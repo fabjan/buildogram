@@ -20,12 +20,11 @@ import gleam/http/response.{Response}
 import gleam/int
 import gleam/io
 import gleam/option
-import gleam/map.{Map}
 import gleam/otp/actor.{StartError}
-import gleam/result
+import gleam/string
 import gleam/uri.{Uri}
 import snag.{Snag}
-import buildogram/util
+import buildogram/cache.{Cache}
 
 pub type HttpGet {
   HttpGet(
@@ -36,8 +35,9 @@ pub type HttpGet {
 }
 
 /// Start a new HTTP client.
-pub fn start() -> Result(Subject(HttpGet), StartError) {
-  actor.start(HttpClient(map.new(), map.new()), handle_get)
+pub fn start(cache_size: Int) -> Result(Subject(HttpGet), StartError) {
+  let lru = cache.lru(cache_size, cache.default_timestamp)
+  actor.start(HttpClient(lru), handle_get)
 }
 
 /// Send a GET request to the given host/path, via client.
@@ -79,8 +79,16 @@ fn new_get(
   Ok(HttpGet(host, path, respond))
 }
 
+type CachedResponse {
+  CachedResponse(response: Response(String), etag: String)
+}
+
 type HttpClient {
-  HttpClient(etags: Map(String, String), cache: Map(String, Response(String)))
+  HttpClient(cache: Cache(CachedResponse))
+}
+
+fn log(s) {
+  io.println("[http_client] " <> s)
 }
 
 fn handle_get(get: HttpGet, state: HttpClient) -> actor.Next(HttpClient) {
@@ -93,53 +101,29 @@ fn handle_get(get: HttpGet, state: HttpClient) -> actor.Next(HttpClient) {
   // this is not general, but works for our GitHub API requests
   let cache_key = req.path
 
-  let response = case map.get(state.etags, cache_key) {
-    // if we have seen an etag for this request, add it for conditional GET
-    Ok(etag) ->
-      req
-      |> request.prepend_header("If-None-Match", etag)
-      |> hackney_send()
-    // otherwise, just send the request
-    Error(Nil) -> hackney_send(req)
-  }
+  let #(cache, cached_resp) = cache.get(state.cache, cache_key)
 
-  case response {
-    Ok(resp) ->
-      case resp.status {
-        304 -> {
-          let resp = case map.get(state.cache, cache_key) {
-            Ok(resp) -> resp
-            Error(Nil) -> resp
-          }
-          process.send(get.respond, Ok(resp))
-          actor.Continue(state)
-        }
-        200 -> {
-          let etag = response.get_header(resp, "etag")
-          io.println(
-            util.show_req(req) <> " 200 OK, caching with etag=" <> result.unwrap(
-              etag,
-              "<none>",
-            ),
-          )
-          let etags = case response.get_header(resp, "etag") {
-            Ok(etag) -> map.insert(state.etags, cache_key, etag)
-            Error(Nil) -> state.etags
-          }
-          let cache = map.insert(state.cache, cache_key, resp)
-          process.send(get.respond, Ok(resp))
-          actor.Continue(HttpClient(etags, cache))
-        }
-        _ -> {
-          process.send(get.respond, snag.error("nope"))
-          actor.Continue(state)
-        }
+  let #(cache, resp) = case cached_resp {
+    Error(Nil) ->
+      case hackney_send(req) {
+        Error(snag) -> #(cache, Error(snag))
+        Ok(resp) -> refill(cache, cache_key, resp)
       }
-    Error(err) -> {
-      process.send(get.respond, Error(err))
-      actor.Continue(state)
+    Ok(cached) -> {
+      let CachedResponse(old_resp, etag) = cached
+      case hackney_send(request.set_header(req, "If-None-Match", etag)) {
+        Error(snag) -> #(cache, Error(snag))
+        Ok(new_resp) ->
+          case new_resp.status {
+            304 -> #(cache, Ok(old_resp))
+            _ -> refill(cache, cache_key, new_resp)
+          }
+      }
     }
   }
+
+  process.send(get.respond, resp)
+  actor.Continue(HttpClient(cache))
 }
 
 fn hackney_send(req: Request(String)) -> Result(Response(String), Snag) {
@@ -157,8 +141,33 @@ fn snagmap_hackney(
       case rep.status {
         200 -> Ok(rep)
         304 -> Ok(rep)
-        status -> snag.error("response status: " <> int.to_string(status))
+        status -> {
+          let issue = "response status: " <> int.to_string(status)
+          log(issue)
+          snag.error(issue)
+        }
       }
-    Error(_) -> snag.error("hackney error")
+    Error(_) -> {
+      let issue = "hackney error"
+      log(issue)
+      snag.error(issue)
+    }
+  }
+}
+
+fn refill(
+  c: Cache(CachedResponse),
+  key: String,
+  resp: Response(String),
+) -> #(Cache(CachedResponse), Result(Response(String), Snag)) {
+  let status = resp.status
+  case response.get_header(resp, "etag") {
+    Ok(etag) if status == 200 -> {
+      log("GET " <> key <> " 200, refilling cache")
+      let c = cache.set(c, key, CachedResponse(resp, etag))
+      log("keys in cache: " <> string.join(cache.keys(c), " "))
+      #(c, Ok(resp))
+    }
+    _ -> #(c, Ok(resp))
   }
 }

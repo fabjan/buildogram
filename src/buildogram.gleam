@@ -24,6 +24,8 @@ import buildogram/util
 
 const default_port = 3000
 
+const default_cache_size = 100
+
 fn log(s) {
   io.println("[main] " <> s)
 }
@@ -37,10 +39,18 @@ pub fn main() {
       default_port
     })
 
+  let cache_size =
+    os.get_env("BUILDOGRAM_CACHE_SIZE")
+    |> result.then(int.parse)
+    |> result.lazy_unwrap(fn() {
+      log("🛠  Default cache size: " <> int.to_string(default_cache_size))
+      default_cache_size
+    })
+
   // TODO: use supervisor
   // Start our dependencies
   try client =
-    http_client.start()
+    http_client.start(cache_size)
     |> util.snag_context("starting HTTP client")
 
   // Start the web server process
