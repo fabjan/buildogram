@@ -63,8 +63,9 @@ pub fn bar_chart(
     let bar_height = scale_seconds(runtime_seconds(run))
     let y_offset = height - bar_height
     let bar_color = case run.conclusion {
-      "success" -> "green"
-      "failure" -> "red"
+      Some("success") -> "green"
+      Some("failure") -> "red"
+      None -> "yellow"
     }
     let link = "window.open('" <> uri.to_string(run.html_url) <> "', '_blank')"
 
