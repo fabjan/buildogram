@@ -11,64 +11,6 @@ pub fn main() {
   gleeunit.main()
 }
 
-pub fn parse_iso_8601_test() {
-  let input = "2022-11-15T21:42:37Z"
-  let expected = Timestamp(2022, 11, 15, 21, 42, 37)
-
-  timestamp.parse_iso_8601(input)
-  |> should.equal(Ok(expected))
-}
-
-pub fn time_diff_test() {
-  let start = Timestamp(2022, 11, 19, 22, 17, 5)
-  let end = Timestamp(2022, 11, 19, 22, 17, 14)
-
-  timestamp.time_diff(start, end)
-  |> should.equal(9)
-}
-
-pub fn sum_test() {
-  let input = []
-  util.sum(input)
-  |> should.equal(0)
-
-  let input = [1, 2, 3]
-  util.sum(input)
-  |> should.equal(6)
-}
-
-pub fn max_test() {
-  let input = []
-  util.max(input, -1)
-  |> should.equal(-1)
-
-  let input = [1, 2, 3]
-  util.max(input, 0)
-  |> should.equal(3)
-}
-
-pub fn median_test() {
-  let input = []
-  util.median(input)
-  |> should.equal(None)
-
-  let input = [5]
-  util.median(input)
-  |> should.equal(Some(5))
-
-  let input = [1, 2, 3]
-  util.median(input)
-  |> should.equal(Some(2))
-
-  let input = [1, 2, 3, 4]
-  util.median(input)
-  |> should.equal(Some(3))
-
-  let input = [1, 5, 3, 1, 1]
-  util.median(input)
-  |> should.equal(Some(1))
-}
-
 pub fn decode_run_test() {
   let input_json =
     "{

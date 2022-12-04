@@ -1,11 +1,6 @@
 import gleam/erlang/atom.{Atom}
-import gleeunit
 import gleeunit/should
 import buildogram/cache
-
-pub fn main() {
-  gleeunit.main()
-}
 
 pub fn get_empty_test() {
   let c = cache.lru(1, fake_timer())
