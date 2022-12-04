@@ -12,7 +12,9 @@
 ////   See the License for the specific language governing permissions and
 ////   limitations under the License.
 
+import gleam/base
 import gleam/bit_builder.{BitBuilder}
+import gleam/erlang/atom.{Atom}
 import gleam/http.{Get}
 import gleam/http/request.{Request}
 import gleam/http/response.{Response}
@@ -81,14 +83,21 @@ fn handle_get_svg(client, owner, repo) {
 
   try runs = github.get_all_runs(client, repo_path)
 
-  let content_type = "image/svg+xml"
   let response_body = diagram.bar_chart(runs, 400, 100)
 
-  Ok(
+  let resp =
     response.new(200)
+    |> response.prepend_header("content-type", "image/svg+xml")
+    // By adding no-cache and etag headers we can inform proxies and browsers
+    // that they should not cache the response.
+    |> response.prepend_header("etag", "W/\"" <> md5(response_body) <> "\"")
+    |> response.prepend_header("cache-control", "no-cache")
+
+  let resp =
+    resp
     |> response.set_body(bit_builder.from_string(response_body))
-    |> response.prepend_header("content-type", content_type),
-  )
+
+  Ok(resp)
 }
 
 fn snag_handler(
@@ -106,3 +115,12 @@ fn snag_handler(
     }
   }
 }
+
+fn md5(data: String) -> String {
+  let algo = atom.create_from_string("md5")
+  let digest = hash(algo, data)
+  base.encode64(digest, True)
+}
+
+external fn hash(algo: Atom, data: String) -> BitString =
+  "crypto" "hash"
