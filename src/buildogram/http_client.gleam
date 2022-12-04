@@ -26,6 +26,8 @@ import gleam/uri.{Uri}
 import snag.{Snag}
 import buildogram/cache.{Cache}
 
+const request_timeout = 10000
+
 pub type HttpGet {
   HttpGet(
     host: String,
@@ -48,10 +50,10 @@ pub fn get(client, host, path) -> Result(Response(String), Snag) {
   process.send(client, req)
 
   // FIXME: this is not a flatmap...
-  case process.receive(pipe, 5000) {
+  case process.receive(pipe, request_timeout) {
     Ok(Ok(response)) -> Ok(response)
     Ok(Error(snag)) -> Error(snag)
-    Error(_) -> snag.error("timeout")
+    Error(_) -> snag.error("timeout waiting for response")
   }
 }
 
@@ -63,10 +65,10 @@ pub fn get_url(client, url) -> Result(Response(String), Snag) {
   process.send(client, req)
 
   // FIXME: this is not a flatmap...
-  case process.receive(pipe, 5000) {
+  case process.receive(pipe, request_timeout) {
     Ok(Ok(response)) -> Ok(response)
     Ok(Error(snag)) -> Error(snag)
-    Error(_) -> snag.error("timeout")
+    Error(_) -> snag.error("timeout waiting for response")
   }
 }
 
