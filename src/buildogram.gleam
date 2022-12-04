@@ -14,7 +14,6 @@
 
 import gleam/io
 import gleam/int
-import gleam/string
 import gleam/result
 import gleam/erlang/process
 import gleam/erlang/os
@@ -23,11 +22,20 @@ import buildogram/http_server
 import buildogram/http_client
 import buildogram/util
 
+const default_port = 3000
+
+fn log(s) {
+  io.println("[main] " <> s)
+}
+
 pub fn main() {
   let port =
     os.get_env("PORT")
     |> result.then(int.parse)
-    |> result.unwrap(3000)
+    |> result.lazy_unwrap(fn() {
+      log("🛠  Default port: " <> int.to_string(default_port))
+      default_port
+    })
 
   // TODO: use supervisor
   // Start our dependencies
@@ -39,9 +47,8 @@ pub fn main() {
   try server = http_server.stack(client)
   assert Ok(_) = elli.start(server, on_port: port)
 
-  ["Listening on localhost:", int.to_string(port), " ✨"]
-  |> string.concat
-  |> io.println
+  log("✨ Buildogram is now listening on :" <> int.to_string(port))
+  log("Use Ctrl+C to break")
 
   // TODO: signal handling
   Ok(process.sleep_forever())

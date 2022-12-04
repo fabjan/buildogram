@@ -25,6 +25,10 @@ import buildogram/github
 import buildogram/http_client.{HttpGet}
 import buildogram/util
 
+fn log(s) {
+  io.println("[http_server] " <> s)
+}
+
 /// Configure middleware etc.
 pub fn stack(
   client: Subject(HttpGet),
@@ -95,7 +99,7 @@ fn snag_handler(
     case before(x) {
       Ok(response) -> response
       Error(s) -> {
-        io.println(util.show_req(x) <> " " <> snag.line_print(s))
+        log(util.show_request(x) <> " " <> snag.line_print(s))
         response.new(500)
         |> response.set_body(body_builder("Internal Server Error"))
       }

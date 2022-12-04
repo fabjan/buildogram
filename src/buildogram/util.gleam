@@ -14,6 +14,7 @@
 
 import gleam/http
 import gleam/http/request.{Request}
+import gleam/http/response.{Response}
 import gleam/int
 import gleam/json
 import gleam/list
@@ -75,7 +76,7 @@ pub fn dynamic_issue(err: dynamic.DecodeError) -> String {
 }
 
 /// One-line description of an HTTP request.
-pub fn show_req(req: Request(a)) -> String {
+pub fn show_request(req: Request(a)) -> String {
   case req.method {
     http.Connect -> "CONNECT"
     http.Delete -> "DELETE"
@@ -90,6 +91,13 @@ pub fn show_req(req: Request(a)) -> String {
   }
   |> string.append(" ")
   |> string.append(req.path)
+}
+
+/// One-line description of an HTTP response.
+pub fn show_response(rep: Response(a)) -> String {
+  "HTTP"
+  |> string.append(" ")
+  |> string.append(int.to_string(rep.status))
 }
 
 /// Transform any error to a new Snag with the given context.

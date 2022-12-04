@@ -26,6 +26,10 @@ import buildogram/http_client.{HttpGet}
 import buildogram/timestamp.{Timestamp, decode_timestamp}
 import buildogram/util
 
+fn log(s) {
+  io.println("[github] " <> s)
+}
+
 /// WorkflowRun is a full pipeline run.
 pub type WorkflowRun {
   WorkflowRun(
@@ -84,7 +88,7 @@ fn collect_previous_attempts(
 ) -> Result(List(WorkflowRun), Snag) {
   case max_depth {
     0 -> {
-      io.println("Max depth reached, can't get all previous attempts")
+      log("Max depth reached, can't get all previous attempts")
       Ok(runs)
     }
     _ ->
