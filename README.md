@@ -1,5 +1,7 @@
 # Buildogram
 
+[![latest release](https://img.shields.io/github/v/release/fabjan/buildogram?label=latest%20release&logo=github&sort=semver)](https://github.com/fabjan/buildogram/releases)
+
 Shows stats for your CI pipelines.
 
 See build times or test results over time. Like so:
@@ -11,29 +13,38 @@ Inspired by the simplicity of the great [CI-BuildStats](https://github.com/dusti
 ## Quick start
 
 ```sh
-gleam run   # Run the project
 gleam test  # Run the tests
+gleam run   # Run the project
 gleam shell # Run an Erlang shell
 ```
 
 ## Deploying
 
-See [buildogram packages](https://github.com/fabjan/buildogram/pkgs/container/buildogram).
+For each release, a container image is pushed to [buildogram packages](https://github.com/fabjan/buildogram/pkgs/container/buildogram).
 
-You can also use the [Dockerfile](./Dockerfile) to build your own container image. By default it listens on port 3000.
-
-Build with docker (takes a good while):
-
-```sh
-docker build -t buildogram .
-```
-
-You can then try it out locally with curl:
+You can run it locally with Docker:
 
 ```shell session
-$ docker run --rm -d -p3000:3000 buildogram:latest
-9c28f144abc326e71c04b43242267ede278175c248284e42f1f5b8975850dce3
+$ docker run --rm -p3000:3000 -it ghcr.io/fabjan/buildogram:latest
+Unable to find image 'ghcr.io/fabjan/buildogram:latest' locally
+latest: Pulling from fabjan/buildogram
+ca7dd9ec2225: Already exists 
+e5c19fb42d85: Already exists 
+649443606315: Pull complete 
+4f4fb700ef54: Pull complete 
+Digest: sha256:4d2ea97f8efcf8c397ad8b711ee4d6b7a101ae4b5376c743e91fe0095136f4b4
+Status: Downloaded newer image for ghcr.io/fabjan/buildogram:latest
+[main] 🛠  Default port: 3000
+[main] 🛠  Default cache size: 100
+[main] ✨ Buildogram is now listening on :3000
+[main] Use Ctrl+C to break
+```
 
+You will have to press Ctrl+C twice to exit.
+
+Try fetching the diagram from another terminal:
+
+```shell session
 $ curl http://localhost:3000/bars/fabjan/buildogram
 <svg xmlns="http://www.w3.org/2000/svg" width="400" height="100" > <rect x="0" y="74" width="5" height="26" fill="red" onclick="window.open('https://github.com/fabjan/buildogram/actions/runs/3507479383', '_blank')" />
 <rect x="6" y="18" width="5" height="82" fill="red" onclick="window.open('https://github.com/fabjan/buildogram/actions/runs/3508779840', '_blank')" />
@@ -41,3 +52,16 @@ $ curl http://localhost:3000/bars/fabjan/buildogram
 <rect x="18" y="17" width="5" height="83" fill="green" onclick="window.open('https://github.com/fabjan/buildogram/actions/runs/3509164502', '_blank')" />
 <rect x="24" y="25" width="5" height="75" fill="green" onclick="window.open('https://github.com/fabjan/buildogram/actions/runs/3558553196', '_blank')" /> <g><line  x1="0" y1="0" x2="0" y2="100" stroke="black"/><line  x1="0" y1="10" x2="400" y2="10" stroke="black" stroke-dasharray="5,5"/><text x="1" y="12" font-size="12" font-family="sans-serif" fill="black">57s</text><text x="1" y="100" font-size="12" font-family="sans-serif" fill="black">0s</text></g> </svg>
 ```
+
+## Building
+
+You can use the [Dockerfile](./Dockerfile) to build your own container image. By default it listens on port 3000.
+
+Build with docker (takes a good while):
+
+```shell session
+$ docker build -t buildogram -t buildogram:dev .
+$ docker run --rm -p3000:3000 -it buildogram:dev
+```
+
+You can then try it out locally with curl as described above.
