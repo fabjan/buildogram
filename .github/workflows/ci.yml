@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - test-branch-please-ignore
   pull_request:
 
 jobs:
