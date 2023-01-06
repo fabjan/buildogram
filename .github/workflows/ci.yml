@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3.0.0
-      - uses: erlef/setup-beam@v1.13.0
+      - uses: fabjan/setup-beam@test-branch-please-ignore
         with:
           elixir-version: "1.14.2"
           gleam-version: "0.25.0"
