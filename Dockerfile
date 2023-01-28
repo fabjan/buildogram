@@ -1,8 +1,12 @@
-FROM elixir:1.14.2-alpine AS builder
+ARG ELIXIR_VERSION=1.14.2
+ARG ERLANG_VERSION=25.1.2
+
+FROM elixir:${ELIXIR_VERSION}-alpine AS builder
 
 # Setup gleam
-RUN wget https://github.com/gleam-lang/gleam/releases/download/v0.25.0/gleam-v0.25.0-x86_64-unknown-linux-musl.tar.gz
-RUN tar -xzf gleam-v0.25.0-x86_64-unknown-linux-musl.tar.gz
+ENV GLEAM_VERSION=0.26.1
+RUN wget https://github.com/gleam-lang/gleam/releases/download/v${GLEAM_VERSION}/gleam-v${GLEAM_VERSION}-x86_64-unknown-linux-musl.tar.gz
+RUN tar -xzf gleam-v${GLEAM_VERSION}-x86_64-unknown-linux-musl.tar.gz
 RUN mv gleam /usr/local/bin/gleam
 
 # Prepare the dependencies
@@ -19,7 +23,7 @@ COPY src /build/src
 RUN gleam export erlang-shipment
 
 # Copy to clean runtime image
-FROM erlang:25.1.2.0-alpine AS runtime
+FROM erlang:${ERLANG_VERSION}-alpine AS runtime
 COPY --from=builder /build/build/erlang-shipment /app
 
 # Run the server
