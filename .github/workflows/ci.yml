@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3.0.0
-      - uses: erlef/setup-beam@v1.15.2
+      - uses: erlef/setup-beam@049962787bb993eed9618052c3096a5c5157205a
         with:
           version-type: strict
           version-file: .tool-versions
