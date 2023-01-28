@@ -26,7 +26,7 @@ import gleam/uri.{Uri}
 import snag.{Snag}
 import buildogram/cache.{Cache}
 
-const request_timeout = 10000
+const request_timeout = 10_000
 
 pub type HttpGet {
   HttpGet(
