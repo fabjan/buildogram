@@ -13,6 +13,7 @@
 ////   limitations under the License.
 
 import gleam/int
+import gleam/io
 import gleam/list
 import gleam/map
 import gleam/option.{None, Some}
@@ -24,6 +25,10 @@ import buildogram/github
 import buildogram/svg
 import buildogram/timestamp
 import buildogram/util
+
+fn log(s) {
+  io.println("[diagram] " <> s)
+}
 
 /// Render an SVG bar chart from the given workflow runs.
 pub fn bar_chart(
@@ -65,7 +70,13 @@ pub fn bar_chart(
     let bar_color = case run.conclusion {
       Some("success") -> "green"
       Some("failure") -> "red"
+      Some("startup_failure") -> "orange"
       None -> "yellow"
+      Some(other) -> {
+        let run_url = uri.to_string(run.html_url)
+        log("Unknown conclusion: " <> other <> " for run " <> run_url)
+        "magenta"
+      }
     }
     let link = "window.open('" <> uri.to_string(run.html_url) <> "', '_blank')"
 
