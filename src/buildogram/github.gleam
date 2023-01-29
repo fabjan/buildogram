@@ -18,7 +18,7 @@ import gleam/json
 import gleam/http/response.{Response}
 import gleam/io
 import gleam/list
-import gleam/option.{Option}
+import gleam/option.{None, Option, Some}
 import gleam/result
 import gleam/uri.{Uri}
 import snag.{Snag}
@@ -64,7 +64,7 @@ pub type WorkflowJobRun {
 pub fn get_all_runs(
   client: Subject(HttpGet),
   repo: String,
-) -> Result(List(WorkflowRun), Snag) {
+) -> Result(List(List(WorkflowRun)), Snag) {
   try resp =
     http_client.get(
       client,
@@ -76,57 +76,45 @@ pub fn get_all_runs(
     resp
     |> json_decode(dynamic.field("workflow_runs", dynamic.list(decode_run)))
 
-  try all_runs = collect_previous_attempts(client, runs, 5)
+  try all_runs =
+    list.map(runs, fn(run) { collect_previous_attempts(client, run, 5, []) })
+    |> result.all()
 
   Ok(all_runs)
 }
 
 fn collect_previous_attempts(
   client: Subject(HttpGet),
-  runs: List(WorkflowRun),
+  run: WorkflowRun,
   max_depth: Int,
+  acc: List(WorkflowRun),
 ) -> Result(List(WorkflowRun), Snag) {
+  let acc = [run, ..acc]
+
   case max_depth {
     0 -> {
       log("Max depth reached, can't get all previous attempts")
-      Ok(runs)
+      Ok(acc)
     }
     _ ->
-      case previous_run_urls(runs) {
-        [] -> Ok(runs)
-        urls -> {
-          try prevs = result.all(previous_attempts(client, urls))
-          collect_previous_attempts(client, prevs, max_depth - 1)
-          |> result.map(fn(prevprev) {
-            prevprev
-            |> list.append(prevs)
-            |> list.append(runs)
-          })
+      case run.previous_attempt_url {
+        None -> Ok(acc)
+        Some(url) -> {
+          try prev = get_run(client, url)
+          collect_previous_attempts(client, prev, max_depth - 1, acc)
         }
       }
   }
 }
 
-fn previous_run_urls(runs: List(WorkflowRun)) -> List(Uri) {
-  runs
-  |> list.filter_map(fn(run) { option.to_result(run.previous_attempt_url, Nil) })
-}
+fn get_run(client: Subject(HttpGet), run_url: Uri) -> Result(WorkflowRun, Snag) {
+  try resp = http_client.get_url(client, run_url)
 
-fn previous_attempts(
-  client: Subject(HttpGet),
-  run_urls: List(Uri),
-) -> List(Result(WorkflowRun, Snag)) {
-  let get_run = fn(run_url) -> Result(WorkflowRun, Snag) {
-    try resp = http_client.get_url(client, run_url)
+  try run =
+    resp
+    |> json_decode(decode_run)
 
-    try run =
-      resp
-      |> json_decode(decode_run)
-
-    Ok(run)
-  }
-
-  list.map(run_urls, get_run)
+  Ok(run)
 }
 
 fn json_decode(
