@@ -15,10 +15,8 @@
 import gleam/int
 import gleam/io
 import gleam/list
-import gleam/map
 import gleam/option.{None, Some}
 import gleam/pair
-import gleam/result
 import gleam/string_builder
 import gleam/uri
 import buildogram/github
@@ -31,19 +29,17 @@ fn log(s) {
 }
 
 /// Render an SVG bar chart from the given workflow runs.
+///
+/// The runs are grouped by pipeline run, and each group of retries is rendered
+/// as a stack.
 pub fn bar_chart(
-  runs: List(github.WorkflowRun),
+  grouped_runs: List(List(github.WorkflowRun)),
   width: Int,
   height: Int,
 ) -> String {
   let bar_width = 5
   let text_size = 12
   let max_height = height - 10
-
-  let grouped_runs =
-    runs
-    |> list.sort(fn(a, b) { int.compare(a.run_number, b.run_number) })
-    |> list_group_by(fn(r: github.WorkflowRun) { r.run_number })
 
   let runtime_seconds = fn(run: github.WorkflowRun) {
     timestamp.time_diff(run.run_started_at, run.updated_at)
@@ -57,7 +53,8 @@ pub fn bar_chart(
 
   // per attempt
   let median_runtime =
-    runs
+    grouped_runs
+    |> list.flatten()
     |> list.map(runtime_seconds)
     |> util.median()
     |> option.unwrap(max_runtime)
@@ -130,19 +127,4 @@ pub fn bar_chart(
     |> string_builder.to_string()
 
   chart
-}
-
-fn list_group_by(l: List(a), f: fn(a) -> key) -> List(List(a)) {
-  l
-  |> list.fold(
-    map.new(),
-    fn(acc, item) {
-      let key = f(item)
-      let items =
-        map.get(acc, key)
-        |> result.unwrap([])
-      map.insert(acc, key, list.append(items, [item]))
-    },
-  )
-  |> map.values()
 }
