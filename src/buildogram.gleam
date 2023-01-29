@@ -55,7 +55,9 @@ pub fn main() {
 
   // Start the web server process
   try server = http_server.stack(client)
-  assert Ok(_) = elli.start(server, on_port: port)
+  try _ =
+    elli.start(server, on_port: port)
+    |> util.snag_context("starting HTTP server")
 
   log("✨ Buildogram is now listening on :" <> int.to_string(port))
   log("Use Ctrl+C to break")
