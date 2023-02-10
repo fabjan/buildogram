@@ -14,54 +14,80 @@
 
 import gleam/io
 import gleam/int
+import gleam/option.{Some}
 import gleam/result
-import gleam/erlang/process
+import gleam/erlang
 import gleam/erlang/os
+import gleam/erlang/process
 import gleam/http/elli
 import buildogram/http_server
 import buildogram/http_client
-import buildogram/util
-
-const default_port = 3000
-
-const default_cache_size = 100
+import outil.{CommandError, CommandResult, print_usage_and_exit}
+import outil/opt
+import snag.{Snag}
 
 fn log(s) {
   io.println("[main] " <> s)
 }
 
-pub fn main() {
-  let port =
-    os.get_env("PORT")
-    |> result.then(int.parse)
-    |> result.lazy_unwrap(fn() {
-      log("🛠  Default port: " <> int.to_string(default_port))
-      default_port
-    })
+pub fn get_env(
+  name: String,
+  parse: fn(String) -> Result(a, Nil),
+  default: a,
+) -> a {
+  os.get_env(name)
+  |> result.then(parse)
+  |> result.unwrap(default)
+}
 
-  let cache_size =
-    os.get_env("BUILDOGRAM_CACHE_SIZE")
-    |> result.then(int.parse)
-    |> result.lazy_unwrap(fn() {
-      log("🛠  Default cache size: " <> int.to_string(default_cache_size))
-      default_cache_size
-    })
+pub fn main_cmd(args: List(String)) -> CommandResult(Nil, Snag) {
+  use cmd <- outil.command(
+    "buildogram",
+    "Serve buildogram SVGs on request.",
+    args,
+  )
+
+  let port = get_env("PORT", int.parse, 3000)
+  use port, cmd <- opt.int_(cmd, "port", Some("p"), "Port to listen on", port)
+
+  let cache_size = get_env("BUILDOGRAM_CACHE_SIZE", int.parse, 100)
+  use cache_size, cmd <- opt.int(cmd, "cache", "HTTP cache size", cache_size)
+
+  try port = port(cmd)
+  try cache_size = cache_size(cmd)
 
   // TODO: use supervisor
   // Start our dependencies
   try client =
     http_client.start(cache_size)
-    |> util.snag_context("starting HTTP client")
+    |> cmd_snag("starting HTTP client")
 
   // Start the web server process
-  try server = http_server.stack(client)
+  try server =
+    http_server.stack(client)
+    |> cmd_result()
   try _ =
     elli.start(server, on_port: port)
-    |> util.snag_context("starting HTTP server")
+    |> cmd_snag("starting HTTP server")
 
+  log("🛠 HTTP cache item limit: " <> int.to_string(cache_size))
   log("✨ Buildogram is now listening on :" <> int.to_string(port))
-  log("Use Ctrl+C to break")
+  log("Use Ctrl+C, Ctrl+C to stop.")
 
   // TODO: signal handling
   Ok(process.sleep_forever())
+}
+
+pub fn main() {
+  erlang.start_arguments()
+  |> main_cmd()
+  |> result.map_error(print_usage_and_exit)
+}
+
+fn cmd_snag(res: Result(a, b), context: String) -> CommandResult(a, Snag) {
+  result.map_error(res, fn(_) { CommandError(snag.new(context)) })
+}
+
+fn cmd_result(res: Result(a, b)) -> CommandResult(a, b) {
+  result.map_error(res, fn(e) { CommandError(e) })
 }

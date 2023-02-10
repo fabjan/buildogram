@@ -19,10 +19,8 @@ import gleam/int
 import gleam/json
 import gleam/list
 import gleam/option.{Option}
-import gleam/result
 import gleam/string
 import gleam/dynamic
-import snag.{Snag}
 
 /// The sum of all Ints in the given list.
 pub fn sum(l: List(Int)) -> Int {
@@ -98,9 +96,4 @@ pub fn show_response(rep: Response(a)) -> String {
   "HTTP"
   |> string.append(" ")
   |> string.append(int.to_string(rep.status))
-}
-
-/// Transform any error to a new Snag with the given context.
-pub fn snag_context(res: Result(a, b), context: String) -> Result(a, Snag) {
-  result.map_error(res, fn(_) { snag.new(context) })
 }
