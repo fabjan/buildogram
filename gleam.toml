@@ -2,11 +2,11 @@ name = "buildogram"
 version = "0.1.0"
 
 licences = ["Apache-2.0"]
-description = "An application that keeps track of and displays build pipeline statistics."
+description = "An application that displays build pipeline statistics."
 repository = { type = "github", user = "fabjan", repo = "buildogram" }
 
 [dependencies]
-gleam_stdlib = "~> 0.24"
+gleam_stdlib = "~> 0.26"
 gleam_erlang = "~> 0.17"
 gleam_elli = "~> 2.0"
 gleam_http = "~> 3.1"
@@ -14,6 +14,7 @@ gleam_json = "~> 0.5"
 gleam_hackney = "~> 0.2"
 snag = "~> 0.2"
 gleam_otp = "~> 0.5"
+outil = "~> 0.3.3"
 
 [dev-dependencies]
 gleeunit = "~> 0.6"

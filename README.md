@@ -26,21 +26,10 @@ You can run it locally with Docker:
 
 ```shell session
 $ docker run --rm -p3000:3000 -it ghcr.io/fabjan/buildogram:latest
-Unable to find image 'ghcr.io/fabjan/buildogram:latest' locally
-latest: Pulling from fabjan/buildogram
-ca7dd9ec2225: Already exists 
-e5c19fb42d85: Already exists 
-649443606315: Pull complete 
-4f4fb700ef54: Pull complete 
-Digest: sha256:4d2ea97f8efcf8c397ad8b711ee4d6b7a101ae4b5376c743e91fe0095136f4b4
-Status: Downloaded newer image for ghcr.io/fabjan/buildogram:latest
-[main] 🛠  Default port: 3000
-[main] 🛠  Default cache size: 100
+[main] 🛠 HTTP cache item limit: 100
 [main] ✨ Buildogram is now listening on :3000
-[main] Use Ctrl+C to break
+[main] Use Ctrl+C, Ctrl+C to stop.
 ```
-
-You will have to press Ctrl+C twice to exit.
 
 Try fetching the diagram from another terminal:
 
