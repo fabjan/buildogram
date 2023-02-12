@@ -1,5 +1,4 @@
 import gleam/int
-import gleam/io
 import gleam/list
 import gleam/option.{None, Option, Some}
 import gleam/regex
@@ -15,8 +14,6 @@ pub fn one_run_test() {
 
   let diagram = diagram.bar_chart(runs, 1, 1)
 
-  io.println(diagram)
-
   // each run yields a rect in the SVG
   count_rects(diagram)
   |> should.equal(1)
@@ -28,8 +25,6 @@ pub fn multi_attempt_run_test() {
   ]
 
   let diagram = diagram.bar_chart(runs, 1, 1)
-
-  io.println(diagram)
 
   // each run yields a rect in the SVG
   count_rects(diagram)
@@ -65,8 +60,6 @@ pub fn many_runs_test() {
 
   let diagram = diagram.bar_chart(runs, 1, 1)
 
-  io.println(diagram)
-
   // each run yields a rect in the SVG
   count_rects(diagram)
   |> should.equal(15)
@@ -80,8 +73,6 @@ pub fn unexpected_conclusion_test() {
 
   let diagram = diagram.bar_chart(runs, 1, 1)
 
-  io.println(diagram)
-
   // each run yields a rect in the SVG
   count_rects(diagram)
   |> should.equal(2)
@@ -94,8 +85,6 @@ pub fn empty_runs_test() {
   let runs = []
 
   let diagram = diagram.bar_chart(runs, 1, 1)
-
-  io.println(diagram)
 
   // each run yields a rect in the SVG
   count_rects(diagram)
