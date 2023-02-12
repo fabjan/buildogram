@@ -27,7 +27,7 @@ import outil/opt
 import snag.{Snag}
 
 fn log(s) {
-  io.println("[main] " <> s)
+  io.println_error("[main] " <> s)
 }
 
 pub fn get_env(

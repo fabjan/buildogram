@@ -25,7 +25,7 @@ import buildogram/timestamp
 import buildogram/util
 
 fn log(s) {
-  io.println("[diagram] " <> s)
+  io.println_error("[diagram] " <> s)
 }
 
 /// Render an SVG bar chart from the given workflow runs.

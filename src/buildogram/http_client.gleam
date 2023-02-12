@@ -90,7 +90,7 @@ type HttpClient {
 }
 
 fn log(s) {
-  io.println("[http_client] " <> s)
+  io.println_error("[http_client] " <> s)
 }
 
 fn handle_get(get: HttpGet, state: HttpClient) -> actor.Next(HttpClient) {
