@@ -1,4 +1,5 @@
 import gleam/int
+import gleam/io
 import gleam/list
 import gleam/option.{None, Option, Some}
 import gleam/regex
@@ -66,6 +67,8 @@ pub fn many_runs_test() {
 }
 
 pub fn unexpected_conclusion_test() {
+  io.println_error("Heads up: this test will print to stderr!")
+
   let runs = [
     [fake_run(0, 5, "unexpected", None)],
     [fake_run(0, 5, "wjin beof8y23bu", None)],
