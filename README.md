@@ -18,6 +18,15 @@ gleam run   # Run the project
 gleam shell # Run an Erlang shell
 ```
 
+## Oneshot buildograms
+
+You can use the `--oneshot` command line flag to instead of a server just
+render one SVG immediately for a given repository.
+
+```shell session
+$ podman run --rm ghcr.io/fabjan/buildogram:latest run --oneshot=fabjan/buildogram 2>/dev/null > test.svg
+```
+
 ## Deploying
 
 For each release, a container image is pushed to [buildogram packages](https://github.com/fabjan/buildogram/pkgs/container/buildogram).
