@@ -15,8 +15,6 @@ pub fn one_run_test() {
 
   let diagram = diagram.bar_chart(runs, 1, 1)
 
-  io.println(diagram)
-
   // each run yields a rect in the SVG
   count_rects(diagram)
   |> should.equal(1)
@@ -28,8 +26,6 @@ pub fn multi_attempt_run_test() {
   ]
 
   let diagram = diagram.bar_chart(runs, 1, 1)
-
-  io.println(diagram)
 
   // each run yields a rect in the SVG
   count_rects(diagram)
@@ -65,22 +61,20 @@ pub fn many_runs_test() {
 
   let diagram = diagram.bar_chart(runs, 1, 1)
 
-  io.println(diagram)
-
   // each run yields a rect in the SVG
   count_rects(diagram)
   |> should.equal(15)
 }
 
 pub fn unexpected_conclusion_test() {
+  io.println_error("Heads up: this test will print to stderr!")
+
   let runs = [
     [fake_run(0, 5, "unexpected", None)],
     [fake_run(0, 5, "wjin beof8y23bu", None)],
   ]
 
   let diagram = diagram.bar_chart(runs, 1, 1)
-
-  io.println(diagram)
 
   // each run yields a rect in the SVG
   count_rects(diagram)
@@ -94,8 +88,6 @@ pub fn empty_runs_test() {
   let runs = []
 
   let diagram = diagram.bar_chart(runs, 1, 1)
-
-  io.println(diagram)
 
   // each run yields a rect in the SVG
   count_rects(diagram)

@@ -27,7 +27,7 @@ import buildogram/timestamp.{Timestamp, decode_timestamp}
 import buildogram/util
 
 fn log(s) {
-  io.println("[github] " <> s)
+  io.println_error("[github] " <> s)
 }
 
 /// WorkflowRun is a full pipeline run.

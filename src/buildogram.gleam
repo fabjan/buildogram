@@ -20,6 +20,8 @@ import gleam/erlang
 import gleam/erlang/os
 import gleam/erlang/process
 import gleam/http/elli
+import buildogram/diagram
+import buildogram/github
 import buildogram/http_server
 import buildogram/http_client
 import outil.{CommandError, CommandResult, print_usage_and_exit}
@@ -27,7 +29,7 @@ import outil/opt
 import snag.{Snag}
 
 fn log(s) {
-  io.println("[main] " <> s)
+  io.println_error("[main] " <> s)
 }
 
 pub fn get_env(
@@ -53,6 +55,13 @@ pub fn main_cmd(args: List(String)) -> CommandResult(Nil, Snag) {
   let cache_size = get_env("BUILDOGRAM_CACHE_SIZE", int.parse, 100)
   use cache_size, cmd <- opt.int(cmd, "cache", "HTTP cache size", cache_size)
 
+  use one_shot, cmd <- opt.string(
+    cmd,
+    "oneshot",
+    "Just print the SVG for the given GitHub repo and exit",
+    "",
+  )
+
   try port = port(cmd)
   try cache_size = cache_size(cmd)
 
@@ -61,6 +70,11 @@ pub fn main_cmd(args: List(String)) -> CommandResult(Nil, Snag) {
   try client =
     http_client.start(cache_size)
     |> cmd_snag("starting HTTP client")
+
+  let _ = case one_shot(cmd) {
+    Ok(repo) if repo != "" -> print_svg_and_exit(client, repo)
+    _ -> Nil
+  }
 
   // Start the web server process
   try server =
@@ -91,3 +105,20 @@ fn cmd_snag(res: Result(a, b), context: String) -> CommandResult(a, Snag) {
 fn cmd_result(res: Result(a, b)) -> CommandResult(a, b) {
   result.map_error(res, fn(e) { CommandError(e) })
 }
+
+fn print_svg_and_exit(client, repo_path: String) -> Nil {
+  case github.get_all_runs(client, repo_path) {
+    Ok(runs) -> {
+      let svg = diagram.bar_chart(runs, 400, 100)
+      io.println(svg)
+      halt(0)
+    }
+    Error(Snag(issue, _)) -> {
+      io.println_error("Error: " <> issue)
+      halt(1)
+    }
+  }
+}
+
+external fn halt(Int) -> Nil =
+  "erlang" "halt"

@@ -28,7 +28,7 @@ import buildogram/http_client.{HttpGet}
 import buildogram/util
 
 fn log(s) {
-  io.println("[http_server] " <> s)
+  io.println_error("[http_server] " <> s)
 }
 
 /// Configure middleware etc.
