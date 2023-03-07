@@ -74,9 +74,9 @@ pub fn main_cmd(args: List(String)) -> CommandResult(Nil, Snag) {
 
   use one_shot <- one_shot(cmd)
 
-  let _ = case one_shot {
-    Ok(repo) if repo != "" -> print_svg_and_exit(client, repo)
-    _ -> Nil
+  case one_shot {
+    "" -> Nil
+    repo -> print_svg_and_exit(client, repo)
   }
 
   // Start the web server process
