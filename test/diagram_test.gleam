@@ -98,7 +98,7 @@ pub fn empty_runs_test() {
 }
 
 fn count_rects(s: String) -> Int {
-  assert Ok(re) = regex.from_string("<rect")
+  let assert Ok(re) = regex.from_string("<rect")
   regex.scan(re, s)
   |> list.length
 }
@@ -127,6 +127,6 @@ fn fake_run(
 }
 
 fn must_parse(s: String) -> Uri {
-  assert Ok(url) = uri.parse(s)
+  let assert Ok(url) = uri.parse(s)
   url
 }

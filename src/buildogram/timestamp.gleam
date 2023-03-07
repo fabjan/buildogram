@@ -49,12 +49,12 @@ pub fn parse_iso_8601(date: String) -> Result(Timestamp, ParseError) {
   let [hour, minute, second] = split(timestring, ":")
   let [second, _] = split(second, "Z")
 
-  try year = parse_int(year, "year")
-  try month = parse_int(month, "month")
-  try day = parse_int(day, "day")
-  try hour = parse_int(hour, "hour")
-  try minute = parse_int(minute, "minute")
-  try second = parse_int(second, "second")
+  use year <- result.then(parse_int(year, "year"))
+  use month <- result.then(parse_int(month, "month"))
+  use day <- result.then(parse_int(day, "day"))
+  use hour <- result.then(parse_int(hour, "hour"))
+  use minute <- result.then(parse_int(minute, "minute"))
+  use second <- result.then(parse_int(second, "second"))
   Ok(Timestamp(year, month, day, hour, minute, second))
 }
 
@@ -62,7 +62,7 @@ pub fn parse_iso_8601(date: String) -> Result(Timestamp, ParseError) {
 pub fn decode_timestamp(
   value: Dynamic,
 ) -> Result(Timestamp, List(dynamic.DecodeError)) {
-  try s = dynamic.string(value)
+  use s <- result.then(dynamic.string(value))
   parse_iso_8601(s)
   |> result.map_error(fn(e) {
     [dynamic.DecodeError(expected: "ISO 8601", found: e.issue, path: [])]

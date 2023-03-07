@@ -71,7 +71,7 @@ pub fn keys(from: Cache(a)) -> List(String) {
   map.keys(from.items)
 }
 
-fn prune(in, limit) {
+fn prune(in: Cache(_), limit) {
   case map.size(in.items) < limit {
     True -> in
     False -> {

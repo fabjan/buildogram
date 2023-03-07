@@ -62,27 +62,32 @@ pub fn main_cmd(args: List(String)) -> CommandResult(Nil, Snag) {
     "",
   )
 
-  try port = port(cmd)
-  try cache_size = cache_size(cmd)
+  use port <- port(cmd)
+  use cache_size <- cache_size(cmd)
 
   // TODO: use supervisor
   // Start our dependencies
-  try client =
+  use client <- result.then(
     http_client.start(cache_size)
-    |> cmd_snag("starting HTTP client")
+    |> cmd_snag("starting HTTP client"),
+  )
 
-  let _ = case one_shot(cmd) {
-    Ok(repo) if repo != "" -> print_svg_and_exit(client, repo)
-    _ -> Nil
+  use one_shot <- one_shot(cmd)
+
+  case one_shot {
+    "" -> Nil
+    repo -> print_svg_and_exit(client, repo)
   }
 
   // Start the web server process
-  try server =
+  use server <- result.then(
     http_server.stack(client)
-    |> cmd_result()
-  try _ =
+    |> cmd_result(),
+  )
+  use _ <- result.then(
     elli.start(server, on_port: port)
-    |> cmd_snag("starting HTTP server")
+    |> cmd_snag("starting HTTP server"),
+  )
 
   log("🛠 HTTP cache item limit: " <> int.to_string(cache_size))
   log("✨ Buildogram is now listening on :" <> int.to_string(port))
