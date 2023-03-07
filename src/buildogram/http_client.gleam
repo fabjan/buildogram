@@ -13,7 +13,6 @@
 ////   limitations under the License.
 
 import gleam/result
-
 import gleam/erlang/process.{Subject}
 import gleam/hackney
 import gleam/http.{Get}

@@ -13,7 +13,6 @@
 ////   limitations under the License.
 
 import gleam/result
-
 import gleam/base
 import gleam/bit_builder.{BitBuilder}
 import gleam/erlang/atom.{Atom}
