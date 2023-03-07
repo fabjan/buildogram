@@ -12,6 +12,8 @@
 ////   See the License for the specific language governing permissions and
 ////   limitations under the License.
 
+import gleam/result
+
 import gleam/erlang/process.{Subject}
 import gleam/hackney
 import gleam/http.{Get}
@@ -60,7 +62,7 @@ pub fn get(client, host, path) -> Result(Response(String), Snag) {
 /// Send a GET request to the given URL, via client.
 pub fn get_url(client, url) -> Result(Response(String), Snag) {
   let pipe = process.new_subject()
-  try req = new_get(url, pipe)
+  use req <- result.then(new_get(url, pipe))
 
   process.send(client, req)
 
@@ -77,7 +79,7 @@ fn new_get(
   respond: Subject(Result(Response(String), Snag)),
 ) -> Result(HttpGet, Snag) {
   let Uri(_, _, host, _, path, _, _) = uri
-  try host = option.to_result(host, snag.new("no host"))
+  use host <- result.then(option.to_result(host, snag.new("no host")))
   Ok(HttpGet(host, path, respond))
 }
 

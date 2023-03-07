@@ -12,6 +12,8 @@
 ////   See the License for the specific language governing permissions and
 ////   limitations under the License.
 
+import gleam/result
+
 import gleam/base
 import gleam/bit_builder.{BitBuilder}
 import gleam/erlang/atom.{Atom}
@@ -81,7 +83,7 @@ fn hello(whom) {
 fn handle_get_svg(client, owner, repo) {
   let repo_path = string.concat([owner, "/", repo])
 
-  try runs = github.get_all_runs(client, repo_path)
+  use runs <- result.then(github.get_all_runs(client, repo_path))
 
   let response_body = diagram.bar_chart(runs, 400, 100)
 

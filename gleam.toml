@@ -14,7 +14,7 @@ gleam_json = "~> 0.5"
 gleam_hackney = "~> 0.2"
 snag = "~> 0.2"
 gleam_otp = "~> 0.5"
-outil = "~> 0.3.3"
+outil = "~> 0.4"
 
 [dev-dependencies]
 gleeunit = "~> 0.6"

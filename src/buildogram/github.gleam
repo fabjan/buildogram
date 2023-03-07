@@ -65,20 +65,21 @@ pub fn get_all_runs(
   client: Subject(HttpGet),
   repo: String,
 ) -> Result(List(List(WorkflowRun)), Snag) {
-  try resp =
-    http_client.get(
-      client,
-      "api.github.com",
-      "/repos/" <> repo <> "/actions/runs",
-    )
+  use resp <- result.then(http_client.get(
+    client,
+    "api.github.com",
+    "/repos/" <> repo <> "/actions/runs",
+  ))
 
-  try runs =
+  use runs <- result.then(
     resp
-    |> json_decode(dynamic.field("workflow_runs", dynamic.list(decode_run)))
+    |> json_decode(dynamic.field("workflow_runs", dynamic.list(decode_run))),
+  )
 
-  try all_runs =
+  use all_runs <- result.then(
     list.map(runs, fn(run) { collect_previous_attempts(client, run, 5, []) })
-    |> result.all()
+    |> result.all(),
+  )
 
   Ok(all_runs)
 }
@@ -100,7 +101,7 @@ fn collect_previous_attempts(
       case run.previous_attempt_url {
         None -> Ok(acc)
         Some(url) -> {
-          try prev = get_run(client, url)
+          use prev <- result.then(get_run(client, url))
           collect_previous_attempts(client, prev, max_depth - 1, acc)
         }
       }
@@ -108,11 +109,12 @@ fn collect_previous_attempts(
 }
 
 fn get_run(client: Subject(HttpGet), run_url: Uri) -> Result(WorkflowRun, Snag) {
-  try resp = http_client.get_url(client, run_url)
+  use resp <- result.then(http_client.get_url(client, run_url))
 
-  try run =
+  use run <- result.then(
     resp
-    |> json_decode(decode_run)
+    |> json_decode(decode_run),
+  )
 
   Ok(run)
 }
@@ -121,11 +123,12 @@ fn json_decode(
   response: Response(String),
   decode: fn(Dynamic) -> Result(a, List(dynamic.DecodeError)),
 ) -> Result(a, Snag) {
-  try previous_run =
+  use previous_run <- result.then(
     response.body
     |> json.decode(decode)
     |> snagmap_json()
-    |> snag.context("JSON decode failed")
+    |> snag.context("JSON decode failed"),
+  )
   Ok(previous_run)
 }
 

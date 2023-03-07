@@ -1,3 +1,5 @@
+import gleam/result
+
 import gleeunit/should
 import gleam/json
 import gleam/option.{None, Some}
@@ -31,13 +33,13 @@ pub fn decode_run_test() {
        \"jobs_url\": \"https://api.github.com/repos/fabjan/poopline/actions/runs/3505370706/jobs\"
     }"
 
-  try expect_html_url =
-    uri.parse("https://github.com/fabjan/poopline/actions/runs/3505370706")
+  use expect_html_url <- result.then(uri.parse(
+    "https://github.com/fabjan/poopline/actions/runs/3505370706",
+  ))
 
-  try expect_jobs_url =
-    uri.parse(
-      "https://api.github.com/repos/fabjan/poopline/actions/runs/3505370706/jobs",
-    )
+  use expect_jobs_url <- result.then(uri.parse(
+    "https://api.github.com/repos/fabjan/poopline/actions/runs/3505370706/jobs",
+  ))
 
   let expected =
     WorkflowRun(
@@ -75,10 +77,9 @@ pub fn decode_job_run_test() {
       \"name\": \"inception\"
     }"
 
-  try expect_html_url =
-    uri.parse(
-      "https://github.com/fabjan/poopline/actions/runs/3505370706/jobs/5871644545",
-    )
+  use expect_html_url <- result.then(uri.parse(
+    "https://github.com/fabjan/poopline/actions/runs/3505370706/jobs/5871644545",
+  ))
 
   let expected =
     WorkflowJobRun(
@@ -111,13 +112,13 @@ pub fn decode_in_progress_test() {
        \"jobs_url\": \"https://api.github.com/repos/fabjan/poopline/actions/runs/3505370706/jobs\"
     }"
 
-  try expect_html_url =
-    uri.parse("https://github.com/fabjan/poopline/actions/runs/3505370706")
+  use expect_html_url <- result.then(uri.parse(
+    "https://github.com/fabjan/poopline/actions/runs/3505370706",
+  ))
 
-  try expect_jobs_url =
-    uri.parse(
-      "https://api.github.com/repos/fabjan/poopline/actions/runs/3505370706/jobs",
-    )
+  use expect_jobs_url <- result.then(uri.parse(
+    "https://api.github.com/repos/fabjan/poopline/actions/runs/3505370706/jobs",
+  ))
 
   let expected =
     WorkflowRun(
