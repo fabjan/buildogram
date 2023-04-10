@@ -6,12 +6,12 @@ description = "An application that displays build pipeline statistics."
 repository = { type = "github", user = "fabjan", repo = "buildogram" }
 
 [dependencies]
-gleam_stdlib = "~> 0.26"
+gleam_stdlib = "~> 0.28"
 gleam_erlang = "~> 0.17"
 gleam_elli = "~> 2.0"
 gleam_http = "~> 3.1"
 gleam_json = "~> 0.5"
-gleam_hackney = "~> 0.2"
+gleam_hackney = "~> 1.0"
 snag = "~> 0.2"
 gleam_otp = "~> 0.5"
 outil = "~> 0.4"
