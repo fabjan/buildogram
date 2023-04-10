@@ -155,9 +155,7 @@ pub fn decode_run(dyn: Dynamic) -> Result(WorkflowRun, List(DecodeError)) {
     dynamic.field("run_started_at", decode_timestamp),
     dynamic.field("updated_at", decode_timestamp),
     dynamic.field("jobs_url", dynamic_uri),
-  )(
-    dyn,
-  )
+  )(dyn)
 }
 
 pub fn decode_job_run(dyn: Dynamic) -> Result(WorkflowJobRun, List(DecodeError)) {
@@ -170,9 +168,7 @@ pub fn decode_job_run(dyn: Dynamic) -> Result(WorkflowJobRun, List(DecodeError))
     dynamic.field("conclusion", dynamic.optional(dynamic.string)),
     dynamic.field("started_at", decode_timestamp),
     dynamic.field("completed_at", decode_timestamp),
-  )(
-    dyn,
-  )
+  )(dyn)
 }
 
 fn snagmap_json(res: Result(a, json.DecodeError)) -> Result(a, Snag) {

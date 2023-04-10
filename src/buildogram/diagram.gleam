@@ -81,7 +81,6 @@ pub fn bar_chart(
     |> svg.rect(bar_x, y_offset - bar_y, bar_width, bar_height, bar_color, link)
     |> string_builder.to_string()
   }
-
   let make_stack = fn(i: Int, attempts: List(github.WorkflowRun)) {
     attempts
     |> list.fold(

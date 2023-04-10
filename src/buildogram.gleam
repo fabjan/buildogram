@@ -65,8 +65,6 @@ pub fn main_cmd(args: List(String)) -> CommandResult(Nil, Snag) {
   use port <- port(cmd)
   use cache_size <- cache_size(cmd)
 
-  // TODO: use supervisor
-  // Start our dependencies
   use client <- result.then(
     http_client.start(cache_size)
     |> cmd_snag("starting HTTP client"),
@@ -79,7 +77,6 @@ pub fn main_cmd(args: List(String)) -> CommandResult(Nil, Snag) {
     repo -> print_svg_and_exit(client, repo)
   }
 
-  // Start the web server process
   use server <- result.then(
     http_server.stack(client)
     |> cmd_result(),
