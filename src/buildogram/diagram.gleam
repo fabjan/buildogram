@@ -68,7 +68,7 @@ pub fn bar_chart(
       Some("success") -> "green"
       Some("failure") -> "red"
       Some("startup_failure") -> "orange"
-      None -> "yellow"
+      None -> "turquoise"
       Some(other) -> {
         let run_url = uri.to_string(run.html_url)
         log("Unknown conclusion: " <> other <> " for run " <> run_url)
