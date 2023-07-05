@@ -60,14 +60,20 @@ pub fn evict_touch_test() {
   |> should.equal(Ok("value3"))
 }
 
-/// fake timer helper
+/// Create a fake timer which returns a higher value each time it is called.
+/// Leverages the mutability in the `counters` Erlang stdlib module.
+fn fake_timer() {
+  let counter = counters_new(1, [])
+  fn() {
+    // N.B. 1-based index
+    counters_add(counter, 1, 1)
+    counters_get(counter, 1)
+  }
+}
+
+/// fake timer FFI helpers
 type Counter
 
-/// Create a new counter array of `size` counters. All counters in the array are initially set to zero.
-/// Indexes into counter arrays are one-based.
-/// Valid options are:
-///   * `atomics` - Use atomics for the counters. This is the default.
-///   * `write_concurrency` - Better write concurrency but worse read consistency.
 @external(erlang, "counters", "new")
 fn counters_new(size size: Int, opts opts: List(Atom)) -> Counter
 
@@ -78,12 +84,3 @@ fn counters_get(ref ref: Counter, ix ix: Int) -> Int
 /// Add incr to counter at index ix.
 @external(erlang, "counters", "add")
 fn counters_add(ref ref: Counter, ix ix: Int, incr incr: Int) -> Int
-
-fn fake_timer() {
-  let counter = counters_new(1, [])
-  fn() {
-    // N.B. 1-based index
-    counters_add(counter, 1, 1)
-    counters_get(counter, 1)
-  }
-}
