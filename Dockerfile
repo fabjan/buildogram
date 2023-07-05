@@ -4,7 +4,7 @@ ARG ERLANG_VERSION=25.1.2
 FROM elixir:${ELIXIR_VERSION}-alpine AS builder
 
 # Setup gleam
-ENV GLEAM_VERSION=0.28.1
+ENV GLEAM_VERSION=0.30.0-rc3
 RUN wget https://github.com/gleam-lang/gleam/releases/download/v${GLEAM_VERSION}/gleam-v${GLEAM_VERSION}-x86_64-unknown-linux-musl.tar.gz
 RUN tar -xzf gleam-v${GLEAM_VERSION}-x86_64-unknown-linux-musl.tar.gz
 RUN mv gleam /usr/local/bin/gleam
