@@ -123,5 +123,5 @@ fn md5(data: String) -> String {
   base.encode64(digest, True)
 }
 
-external fn hash(algo: Atom, data: String) -> BitString =
-  "crypto" "hash"
+@external(erlang, "crypto", "hash")
+fn hash(algo algo: Atom, data data: String) -> BitString

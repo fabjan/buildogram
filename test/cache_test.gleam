@@ -61,23 +61,23 @@ pub fn evict_touch_test() {
 }
 
 /// fake timer helper
-external type Counter
+type Counter
 
 /// Create a new counter array of `size` counters. All counters in the array are initially set to zero.
 /// Indexes into counter arrays are one-based.
 /// Valid options are:
 ///   * `atomics` - Use atomics for the counters. This is the default.
 ///   * `write_concurrency` - Better write concurrency but worse read consistency.
-external fn counters_new(size: Int, opts: List(Atom)) -> Counter =
-  "counters" "new"
+@external(erlang, "counters", "new")
+fn counters_new(size size: Int, opts opts: List(Atom)) -> Counter
 
 /// Read counter value.
-external fn counters_get(ref: Counter, ix: Int) -> Int =
-  "counters" "get"
+@external(erlang, "counters", "get")
+fn counters_get(ref ref: Counter, ix ix: Int) -> Int
 
 /// Add incr to counter at index ix.
-external fn counters_add(ref: Counter, ix: Int, incr: Int) -> Int =
-  "counters" "add"
+@external(erlang, "counters", "add")
+fn counters_add(ref ref: Counter, ix ix: Int, incr incr: Int) -> Int
 
 fn fake_timer() {
   let counter = counters_new(1, [])

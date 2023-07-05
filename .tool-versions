@@ -1,4 +1,4 @@
 elixir 1.14.2-otp-25
 erlang 25.1.2
-gleam 0.28.1
+gleam 0.30.0-rc3
 rebar 3.16.0
