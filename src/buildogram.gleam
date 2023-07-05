@@ -122,5 +122,5 @@ fn print_svg_and_exit(client, repo_path: String) -> Nil {
   }
 }
 
-external fn halt(Int) -> Nil =
-  "erlang" "halt"
+@external(erlang, "erlang", "halt")
+fn halt(status: Int) -> Nil
