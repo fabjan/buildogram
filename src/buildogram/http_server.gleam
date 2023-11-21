@@ -13,19 +13,19 @@
 ////   limitations under the License.
 
 import gleam/result
-import gleam/base
-import gleam/bit_builder.{BitBuilder}
-import gleam/erlang/atom.{Atom}
+import gleam/bit_array
+import gleam/bytes_builder.{type BytesBuilder}
+import gleam/erlang/atom.{type Atom}
 import gleam/http.{Get}
-import gleam/http/request.{Request}
-import gleam/http/response.{Response}
+import gleam/http/request.{type Request}
+import gleam/http/response.{type Response}
 import gleam/io
-import gleam/erlang/process.{Subject}
+import gleam/erlang/process.{type Subject}
 import gleam/string
-import snag.{Snag}
+import snag.{type Snag}
 import buildogram/diagram
 import buildogram/github
-import buildogram/http_client.{HttpGet}
+import buildogram/http_client.{type HttpGet}
 import buildogram/util
 
 fn log(s) {
@@ -35,17 +35,17 @@ fn log(s) {
 /// Configure middleware etc.
 pub fn stack(
   client: Subject(HttpGet),
-) -> Result(fn(Request(BitString)) -> Response(BitBuilder), Snag) {
+) -> Result(fn(Request(BitArray)) -> Response(BytesBuilder), Snag) {
   Ok(
     routes(client)
-    |> snag_handler(bit_builder.from_string),
+    |> snag_handler(bytes_builder.from_string),
   )
 }
 
 /// This is the main entry point for the web server.
 pub fn routes(
   client: Subject(HttpGet),
-) -> fn(Request(a)) -> Result(Response(BitBuilder), Snag) {
+) -> fn(Request(a)) -> Result(Response(BytesBuilder), Snag) {
   fn(req) {
     let path = request.path_segments(req)
 
@@ -60,7 +60,7 @@ pub fn routes(
 fn not_found() {
   let body =
     "not found"
-    |> bit_builder.from_string
+    |> bytes_builder.from_string
 
   Ok(
     response.new(404)
@@ -74,7 +74,7 @@ fn hello(whom) {
 
   Ok(
     response.new(200)
-    |> response.set_body(bit_builder.from_string(reply))
+    |> response.set_body(bytes_builder.from_string(reply))
     |> response.prepend_header("content-type", "text/plain"),
   )
 }
@@ -96,7 +96,7 @@ fn handle_get_svg(client, owner, repo) {
 
   let resp =
     resp
-    |> response.set_body(bit_builder.from_string(response_body))
+    |> response.set_body(bytes_builder.from_string(response_body))
 
   Ok(resp)
 }
@@ -120,8 +120,8 @@ fn snag_handler(
 fn md5(data: String) -> String {
   let algo = atom.create_from_string("md5")
   let digest = hash(algo, data)
-  base.encode64(digest, True)
+  bit_array.base64_encode(digest, True)
 }
 
 @external(erlang, "crypto", "hash")
-fn hash(algo algo: Atom, data data: String) -> BitString
+fn hash(algo algo: Atom, data data: String) -> BitArray

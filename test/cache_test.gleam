@@ -1,4 +1,4 @@
-import gleam/erlang/atom.{Atom}
+import gleam/erlang/atom.{type Atom}
 import gleeunit/should
 import buildogram/cache
 

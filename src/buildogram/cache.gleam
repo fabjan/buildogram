@@ -15,7 +15,7 @@
 import gleam/erlang.{Millisecond}
 import gleam/int
 import gleam/list
-import gleam/map.{Map}
+import gleam/map.{type Map}
 import gleam/option.{None, Some}
 import gleam/result
 

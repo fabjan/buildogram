@@ -12,18 +12,18 @@
 ////   See the License for the specific language governing permissions and
 ////   limitations under the License.
 
-import gleam/dynamic.{DecodeError, Dynamic}
-import gleam/erlang/process.{Subject}
+import gleam/dynamic.{type DecodeError, type Dynamic}
+import gleam/erlang/process.{type Subject}
 import gleam/json
-import gleam/http/response.{Response}
+import gleam/http/response.{type Response}
 import gleam/io
 import gleam/list
-import gleam/option.{None, Option, Some}
+import gleam/option.{type Option, None, Some}
 import gleam/result
-import gleam/uri.{Uri}
-import snag.{Snag}
-import buildogram/http_client.{HttpGet}
-import buildogram/timestamp.{Timestamp, decode_timestamp}
+import gleam/uri.{type Uri}
+import snag.{type Snag}
+import buildogram/http_client.{type HttpGet}
+import buildogram/timestamp.{type Timestamp, decode_timestamp}
 import buildogram/util
 
 fn log(s) {
