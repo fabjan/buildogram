@@ -14,7 +14,7 @@
 
 import gleam/int
 import gleam/string
-import gleam/dynamic.{Dynamic}
+import gleam/dynamic.{type Dynamic}
 import gleam/result
 
 /// Something went wrong parsing something.

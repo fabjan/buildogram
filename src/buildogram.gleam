@@ -24,9 +24,9 @@ import buildogram/diagram
 import buildogram/github
 import buildogram/http_server
 import buildogram/http_client
-import outil.{CommandError, CommandResult, print_usage_and_exit}
+import outil.{type CommandResult, CommandError, print_usage_and_exit}
 import outil/opt
-import snag.{Snag}
+import snag.{type Snag, Snag}
 
 fn log(s) {
   io.println_error("[main] " <> s)

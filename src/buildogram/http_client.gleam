@@ -13,19 +13,19 @@
 ////   limitations under the License.
 
 import gleam/result
-import gleam/erlang/process.{Subject}
+import gleam/erlang/process.{type Subject}
 import gleam/hackney
 import gleam/http.{Get}
-import gleam/http/request.{Request}
-import gleam/http/response.{Response}
+import gleam/http/request.{type Request}
+import gleam/http/response.{type Response}
 import gleam/int
 import gleam/io
-import gleam/option
-import gleam/otp/actor.{StartError}
+import gleam/option.{None}
+import gleam/otp/actor.{type StartError}
 import gleam/string
-import gleam/uri.{Uri}
-import snag.{Snag}
-import buildogram/cache.{Cache}
+import gleam/uri.{type Uri, Uri}
+import snag.{type Snag}
+import buildogram/cache.{type Cache}
 
 const request_timeout = 10_000
 
@@ -94,7 +94,10 @@ fn log(s) {
   io.println_error("[http_client] " <> s)
 }
 
-fn handle_get(get: HttpGet, state: HttpClient) -> actor.Next(HttpClient) {
+fn handle_get(
+  get: HttpGet,
+  state: HttpClient,
+) -> actor.Next(HttpGet, HttpClient) {
   let req =
     request.new()
     |> request.set_method(Get)
@@ -126,7 +129,7 @@ fn handle_get(get: HttpGet, state: HttpClient) -> actor.Next(HttpClient) {
   }
 
   process.send(get.respond, resp)
-  actor.Continue(HttpClient(cache))
+  actor.Continue(HttpClient(cache), None)
 }
 
 fn hackney_send(req: Request(String)) -> Result(Response(String), Snag) {

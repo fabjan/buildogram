@@ -13,12 +13,12 @@
 ////   limitations under the License.
 
 import gleam/http
-import gleam/http/request.{Request}
-import gleam/http/response.{Response}
+import gleam/http/request.{type Request}
+import gleam/http/response.{type Response}
 import gleam/int
 import gleam/json
 import gleam/list
-import gleam/option.{Option}
+import gleam/option.{type Option}
 import gleam/string
 import gleam/dynamic
 

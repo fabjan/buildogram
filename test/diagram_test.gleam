@@ -1,14 +1,14 @@
 import gleam/int
 import gleam/io
 import gleam/list
-import gleam/option.{None, Option, Some}
+import gleam/option.{type Option, None, Some}
 import gleam/regex
 import gleam/string
-import gleam/uri.{Uri}
+import gleam/uri.{type Uri}
 import gleeunit/should
-import buildogram/github.{WorkflowRun}
+import buildogram/github.{type WorkflowRun, WorkflowRun}
 import buildogram/diagram
-import buildogram/timestamp.{Timestamp}
+import buildogram/timestamp.{type Timestamp, Timestamp}
 
 pub fn one_run_test() {
   let runs = [[fake_run(0, 5, "success", None)]]
