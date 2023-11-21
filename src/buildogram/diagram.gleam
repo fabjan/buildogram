@@ -118,6 +118,7 @@ pub fn bar_chart(
 
   let bars =
     grouped_runs
+    |> list.reverse()
     |> list.index_map(make_stack)
 
   let chart =
