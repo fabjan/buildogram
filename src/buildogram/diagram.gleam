@@ -49,6 +49,10 @@ pub fn bar_chart(
   let max_runtime =
     grouped_runs
     |> list.map(fn(r) { util.sum(list.map(r, runtime_seconds)) })
+    // FIXME: #19
+    // This is a temporary fix for the case where runs are updated much later
+    // than they actually finished. One week ought to be enough for anyone.
+    |> list.filter(fn(x) { x < 60 * 60 * 24 * 7 })
     |> util.max(0)
 
   // per attempt
@@ -62,9 +66,16 @@ pub fn bar_chart(
   let scale_seconds = fn(secs) { secs * max_height / max_runtime }
 
   let make_bar = fn(bar_x: Int, bar_y: Int, run: github.WorkflowRun) -> String {
-    let bar_height = scale_seconds(runtime_seconds(run))
+    let runtime = runtime_seconds(run)
+    let bar_height = case runtime <= max_runtime {
+      True -> scale_seconds(runtime)
+      // FIXME: #19
+      False -> height
+    }
     let y_offset = height - bar_height
     let bar_color = case run.conclusion {
+      // FIXME: #19
+      _ if max_runtime < runtime -> "pink"
       Some("success") -> "green"
       Some("failure") -> "red"
       Some("startup_failure") -> "orange"
