@@ -1,5 +1,5 @@
 name = "buildogram"
-version = "0.1.0"
+version = "0.1.1"
 
 licences = ["Apache-2.0"]
 description = "An application that displays build pipeline statistics."
